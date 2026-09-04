@@ -1,35 +1,18 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+  return <Tabs
+    tabBar={(props) => <BottomTabBar {...props} />}
+    screenOptions={{
+      headerShown: false,
+      // The visible dock is independently absolute; this removes React Navigation's reserved tab-bar scene area.
+      tabBarStyle: { position: 'absolute', height: 0, backgroundColor: 'transparent', borderTopWidth: 0, elevation: 0 },
+    }}>
+    <Tabs.Screen name="index" options={{ title: 'Today' }} />
+    <Tabs.Screen name="timetable" options={{ title: 'Timetable' }} />
+    <Tabs.Screen name="attendance" options={{ title: 'Attendance' }} />
+    <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+  </Tabs>;
 }

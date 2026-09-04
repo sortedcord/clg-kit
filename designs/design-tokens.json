@@ -1,0 +1,223 @@
+{
+  "meta": {
+    "name": "CLG Kit Design Tokens",
+    "version": "1.0.0",
+    "fontFamily": "Manrope",
+    "units": {
+      "dimension": "dp",
+      "type": "sp",
+      "motion": "ms"
+    }
+  },
+  "color": {
+    "brand": {
+      "ink": "#061430",
+      "cobalt": "#0559FA",
+      "cobaltPressed": "#0047D5",
+      "cobaltSoft": "#E7F0FF",
+      "coral": "#FF7A4F",
+      "coralSoft": "#FFE9E1",
+      "sky": "#D5F2FF",
+      "skySoft": "#F0FAFF"
+    },
+    "neutral": {
+      "canvas": "#F7F9FC",
+      "surface": "#FFFFFF",
+      "surfaceSubtle": "#F0F4F8",
+      "presentationBackdrop": "#E6EBF4",
+      "textPrimary": "#061430",
+      "textSecondary": "#4E6078",
+      "textMuted": "#68788F",
+      "textDisabled": "#9AA8B8",
+      "border": "#DDE5EE",
+      "divider": "#E9EEF4",
+      "scrim": "rgba(6, 20, 48, 0.46)"
+    },
+    "semantic": {
+      "success": {
+        "solid": "#168A63",
+        "text": "#117A57",
+        "soft": "#DDF5EC"
+      },
+      "warning": {
+        "solid": "#F0B44D",
+        "text": "#8A5900",
+        "soft": "#FFF4CE"
+      },
+      "danger": {
+        "solid": "#CF4038",
+        "text": "#A82E2A",
+        "soft": "#FFE9E7"
+      },
+      "neutral": {
+        "solid": "#68788F",
+        "text": "#4E6078",
+        "soft": "#EDF1F5"
+      }
+    },
+    "subject": {
+      "ocean": {
+        "surface": "#BFD5FF",
+        "accent": "#0559FA",
+        "text": "#061430"
+      },
+      "aqua": {
+        "surface": "#DDF7FA",
+        "accent": "#167F96",
+        "text": "#061430"
+      },
+      "lilac": {
+        "surface": "#FDF0FF",
+        "accent": "#9B4BA4",
+        "text": "#061430"
+      },
+      "sun": {
+        "surface": "#FFF3C4",
+        "accent": "#8A6400",
+        "text": "#061430"
+      },
+      "mint": {
+        "surface": "#DDF5EC",
+        "accent": "#117A57",
+        "text": "#061430"
+      },
+      "peach": {
+        "surface": "#FFE5D9",
+        "accent": "#B95230",
+        "text": "#061430"
+      }
+    }
+  },
+  "typography": {
+    "family": {
+      "primary": "Manrope",
+      "fallback": "system-ui"
+    },
+    "weight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "extrabold": 800
+    },
+    "style": {
+      "display": {
+        "fontSize": 40,
+        "lineHeight": 44,
+        "fontWeight": 800,
+        "letterSpacing": -1.2
+      },
+      "heading1": {
+        "fontSize": 32,
+        "lineHeight": 38,
+        "fontWeight": 800,
+        "letterSpacing": -0.8
+      },
+      "heading2": {
+        "fontSize": 24,
+        "lineHeight": 30,
+        "fontWeight": 700,
+        "letterSpacing": -0.4
+      },
+      "heading3": {
+        "fontSize": 20,
+        "lineHeight": 26,
+        "fontWeight": 700,
+        "letterSpacing": -0.2
+      },
+      "title": {
+        "fontSize": 17,
+        "lineHeight": 23,
+        "fontWeight": 700,
+        "letterSpacing": 0
+      },
+      "body": {
+        "fontSize": 15,
+        "lineHeight": 22,
+        "fontWeight": 400,
+        "letterSpacing": 0
+      },
+      "bodySmall": {
+        "fontSize": 13,
+        "lineHeight": 19,
+        "fontWeight": 400,
+        "letterSpacing": 0
+      },
+      "label": {
+        "fontSize": 12,
+        "lineHeight": 16,
+        "fontWeight": 600,
+        "letterSpacing": 0.1
+      },
+      "caption": {
+        "fontSize": 11,
+        "lineHeight": 15,
+        "fontWeight": 500,
+        "letterSpacing": 0.1
+      }
+    }
+  },
+  "spacing": {
+    "0": 0,
+    "1": 2,
+    "2": 4,
+    "3": 8,
+    "4": 12,
+    "5": 16,
+    "6": 20,
+    "7": 24,
+    "8": 32,
+    "9": 40,
+    "10": 48,
+    "11": 64
+  },
+  "radius": {
+    "small": 8,
+    "control": 12,
+    "card": 16,
+    "feature": 20,
+    "sheet": 28,
+    "pill": 999
+  },
+  "size": {
+    "touchTargetMin": 44,
+    "control": 52,
+    "controlCompact": 40,
+    "iconSmall": 16,
+    "icon": 20,
+    "iconLarge": 24,
+    "iconContainer": 40,
+    "screenGutter": 20,
+    "screenGutterWide": 24,
+    "contentMaxWidth": 560,
+    "tabBar": 68
+  },
+  "border": {
+    "hairline": 1,
+    "focus": 2,
+    "accent": 4
+  },
+  "shadow": {
+    "none": {
+      "color": "#061430",
+      "opacity": 0,
+      "radius": 0,
+      "offsetY": 0,
+      "elevation": 0
+    },
+    "floating": {
+      "color": "#061430",
+      "opacity": 0.12,
+      "radius": 18,
+      "offsetY": 8,
+      "elevation": 8
+    }
+  },
+  "motion": {
+    "instant": 100,
+    "quick": 160,
+    "standard": 220,
+    "emphasized": 320,
+    "pressedScale": 0.98
+  }
+}

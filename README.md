@@ -1,50 +1,44 @@
-# Welcome to your Expo app 👋
+# College Kit
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A personal college organiser for timetables, flexible daily classes, and attendance tracking.
 
-## Get started
+## Run with Docker
 
-1. Install dependencies
+The complete production-style stack consists of an Expo Router web bundle served by Nginx and a Node + SQLite API. Nginx proxies the API at the same origin, so no browser CORS or API URL configuration is needed.
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+docker compose up --build
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Open [http://localhost:8080](http://localhost:8080). The API is available through the web container at `http://localhost:8080/api/v1/*`, and its health check is at `http://localhost:8080/health`.
 
-## Learn more
+Stop the stack without deleting attendance data:
 
-To learn more about developing your project with Expo, look at the following resources:
+```sh
+docker compose down
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The SQLite database persists in the named `college-kit-data` Docker volume. To completely reset the seeded application data:
 
-## Join the community
+```sh
+docker compose down -v
+```
 
-Join our community of developers creating universal apps.
+## Local development
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Start the API and Expo development server in separate terminals:
+
+```sh
+npm run api
+npm start
+```
+
+The local web app uses `http://localhost:4000/api/v1` by default. To use a physical device, point Expo at your computer's LAN IP:
+
+```sh
+EXPO_PUBLIC_API_URL=http://192.168.1.20:4000/api/v1 npm start
+```
+
+## Backend
+
+The API and its data model are documented in [`backend/README.md`](backend/README.md). It provides persistent recurring timetable rules, dated class overrides, attendance statuses, subjects, and attendance summaries.

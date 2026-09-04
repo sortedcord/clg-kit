@@ -1,0 +1,12 @@
+node_modules
+.expo
+dist
+web-build
+.git
+.gitignore
+.vscode
+.claude
+backend/data
+*.log
+npm-debug.log
+README.md
