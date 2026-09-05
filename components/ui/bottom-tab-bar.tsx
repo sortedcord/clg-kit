@@ -3,7 +3,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './app-text';
-import { colors, radius, shadow, size, spacing } from './tokens';
+import { colors, radius, size, spacing } from './tokens';
 
 const tabConfig = {
   index: { label: 'Today', icon: 'today-outline', activeIcon: 'today' },
@@ -38,8 +38,20 @@ export function BottomTabBar({ state, descriptors, navigation, insets }: BottomT
           onPress={onPress}
           onLongPress={onLongPress}
           style={({ pressed }) => [styles.tab, focused && styles.tabActive, pressed && styles.pressed]}>
-          <Ionicons name={focused ? config.activeIcon : config.icon} size={focused ? 19 : 20} color={focused ? colors.neutral.surface : colors.neutral.textSecondary} />
-          <AppText variant="caption" color={focused ? colors.neutral.surface : colors.neutral.textSecondary} numberOfLines={1} style={styles.label}>{label}</AppText>
+          <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+            <Ionicons
+              name={focused ? config.activeIcon : config.icon}
+              size={20}
+              color={focused ? colors.brand.cobalt : colors.neutral.textMuted}
+            />
+          </View>
+          <AppText
+            variant="caption"
+            color={focused ? colors.brand.cobalt : colors.neutral.textMuted}
+            numberOfLines={1}
+            style={[styles.label, focused && styles.labelActive]}>
+            {label}
+          </AppText>
         </Pressable>;
       })}
     </View>
@@ -47,10 +59,57 @@ export function BottomTabBar({ state, descriptors, navigation, insets }: BottomT
 }
 
 const styles = StyleSheet.create({
-  floatingArea: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing[4], paddingTop: spacing[3], backgroundColor: 'transparent' },
-  bar: { minHeight: size.touchTargetMin + spacing[3], flexDirection: 'row', alignItems: 'center', gap: 2, padding: spacing[2], borderRadius: radius.sheet, borderCurve: 'continuous', borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface, ...shadow.floating },
-  tab: { minHeight: size.touchTargetMin, flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: radius.pill, borderCurve: 'continuous', paddingHorizontal: spacing[1] },
-  tabActive: { flexDirection: 'row', flexGrow: 1.15, gap: spacing[1] + 2, backgroundColor: colors.brand.cobalt, paddingHorizontal: spacing[3] },
-  label: { textAlign: 'center', flexShrink: 0 },
-  pressed: { opacity: 0.76 },
+  floatingArea: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  bar: {
+    minHeight: size.tabBar,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: colors.neutral.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral.divider,
+    paddingTop: spacing[2],
+    paddingHorizontal: spacing[4],
+  },
+  tab: {
+    minHeight: size.touchTargetMin,
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: spacing[1],
+  },
+  tabActive: {
+    // Active tab keeps the clean columnar structure with color prominence
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    borderCurve: 'continuous',
+  },
+  iconWrapActive: {
+    backgroundColor: colors.brand.cobaltSoft,
+  },
+  label: {
+    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.1,
+  },
+  labelActive: {
+    fontWeight: '700',
+  },
+  pressed: {
+    opacity: 0.72,
+  },
 });

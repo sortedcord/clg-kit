@@ -16,9 +16,9 @@ test.describe('College Kit E2E & Visual Verification', () => {
   test('Today screen loads with date, week strip, and classes', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('text=Today’s classes')).toBeVisible();
-    await expect(page.locator('text=Timetable')).toBeVisible();
-    await expect(page.locator('text=Attendance')).toBeVisible();
-    await expect(page.locator('text=Settings')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Timetable' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Attendance' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
   });
 
   test('Navigation between all bottom tabs works smoothly', async ({ page }) => {

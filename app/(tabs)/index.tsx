@@ -8,6 +8,7 @@ import { AddClassModal } from '@/components/add-class-modal';
 import {
   AppHeader,
   AppText,
+  AttendanceRing,
   BottomSheet,
   Button,
   Card,
@@ -36,7 +37,7 @@ import {
   mondayOfWeek,
   timeToMinutes,
 } from '@/lib/date';
-import { attendanceMessage, attendanceTone, subjectToneFor } from '@/lib/design';
+import { attendanceTone, subjectToneFor } from '@/lib/design';
 import { collegeApi, type AttendanceStatus, type Profile, type Session } from '@/lib/api';
 
 type DayMarker = WeekDay['marker'];
@@ -158,7 +159,6 @@ export default function TodayScreen() {
   };
 
   const isToday = selectedDateKey === todayKey;
-  const insight = attendanceMessage(summary.percentage, summary.total);
   const insightTone = attendanceTone(summary.percentage, summary.total);
   const now = currentMinutes();
   const recessEnabled = Boolean(profile && profile.recessEnabled && timeToMinutes(profile.recessStart) >= 0 && timeToMinutes(profile.recessStart) < timeToMinutes(profile.recessEnd));
@@ -170,6 +170,7 @@ export default function TodayScreen() {
   const insertionIndex = isToday ? (activeTimelineIndex >= 0 ? activeTimelineIndex : timelineItems.findIndex((item) => timeToMinutes(item.start) > now)) : -1;
   const currentTimeLabel = formatCurrentTime();
   const pendingCount = classes.filter((item) => item.status === 'pending').length;
+  const metricTone = summary.total ? (insightTone === 'neutral' ? 'brand' : insightTone) : 'brand';
 
   return <Screen scroll={false} contentContainerStyle={styles.content}>
     <View style={styles.stickyHeader}>
@@ -187,6 +188,29 @@ export default function TodayScreen() {
           <AppText variant="label" color={colors.brand.cobalt}>{profile.initials || '?'}</AppText>
         </Pressable>
       ) : null}
+    </View>
+
+    <View style={styles.attendanceOverview}>
+      <View style={styles.overviewPrimary}>
+        <AttendanceRing
+          percentage={summary.percentage}
+          tone={metricTone}
+          size={76}
+          strokeWidth={8}
+          label=""
+          accessibilityLabel={summary.total ? `Overall attendance ${summary.percentage} percent` : 'No attendance data yet'}
+        />
+        <View style={styles.overviewCopy}>
+          <AppText variant="title">{summary.total ? `${summary.percentage}% overall` : 'No attendance yet'}</AppText>
+          <AppText variant="bodySmall" color={colors.neutral.textSecondary} style={styles.overviewMessage}>
+            {summary.total ? `${summary.attended} of ${summary.total} classes attended` : 'Mark a class to begin tracking.'}
+          </AppText>
+        </View>
+      </View>
+      <View style={styles.overviewTarget}>
+        <AppText variant="caption" color={colors.neutral.textMuted}>Target</AppText>
+        <AppText variant="title" color={colors.brand.cobalt} style={styles.overviewTargetValue}>75%</AppText>
+      </View>
     </View>
 
     <View style={styles.pickerContainer}>
@@ -219,8 +243,6 @@ export default function TodayScreen() {
         <View style={styles.extendHandle} />
       </Pressable>
     </View>
-
-    {summary.total > 0 ? <InlineBanner title={insight.title} message={insight.message} tone={insightTone} style={styles.insight} /> : null}
 
     <View style={styles.sectionHeader}>
       <View style={styles.sectionCopy}>
@@ -431,6 +453,27 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingTop: spacing[1] },
   avatar: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', backgroundColor: colors.brand.cobaltSoft, alignItems: 'center', justifyContent: 'center' },
   avatarPressed: { opacity: 0.78 },
+  attendanceOverview: {
+    marginTop: spacing[3],
+    marginBottom: spacing[3],
+    minHeight: 96,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[4],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderRadius: radius.feature,
+    borderCurve: 'continuous',
+    backgroundColor: colors.brand.skySoft,
+    borderWidth: 1,
+    borderColor: '#DCEEF8',
+  },
+  overviewPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
+  overviewCopy: { flex: 1 },
+  overviewMessage: { marginTop: spacing[1] },
+  overviewTarget: { alignItems: 'flex-end', gap: 2, paddingRight: spacing[1] },
+  overviewTargetValue: { fontVariant: ['tabular-nums'] },
   pickerContainer: {
     marginTop: spacing[1],
     borderRadius: radius.feature,
@@ -472,7 +515,6 @@ const styles = StyleSheet.create({
   indicatorRow: { height: 5, marginTop: 1, justifyContent: 'center', alignItems: 'center' },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
   todayDot: { width: 4.5, height: 4.5, borderRadius: 2.5, backgroundColor: colors.brand.cobalt },
-  insight: { marginTop: spacing[4] },
   sectionHeader: { marginTop: spacing[8], marginBottom: spacing[4], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[4] },
   sectionCopy: { flex: 1 },
   sectionSubtitle: { marginTop: spacing[1] },
