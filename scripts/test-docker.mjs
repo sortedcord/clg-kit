@@ -10,11 +10,11 @@ async function testDocker() {
   const page = await context.newPage();
 
   console.log('Testing app via Docker at http://127.0.0.1:8080...');
-  await page.goto('http://127.0.0.1:8080/');
+  await page.goto('http://127.0.0.1:8080/attendance');
   await page.waitForTimeout(2000);
 
-  // Open add class modal
-  const addBtn = page.getByRole('button', { name: 'Add a class' });
+  // The separate coral plus action is the last Add a class control in tab scenes.
+  const addBtn = page.getByRole('button', { name: 'Add a class' }).last();
   await addBtn.click();
   await page.waitForTimeout(1000);
   await page.screenshot({ path: './screenshots/docker-add-class-modal.png' });
