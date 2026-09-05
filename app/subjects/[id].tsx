@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppHeader,
@@ -21,7 +21,7 @@ import {
   spacing,
   type SemanticTone,
 } from '@/components/ui';
-import { formatSessionDate } from '@/lib/date';
+import { currentMinutes, dateKey, formatSessionDate, timeToMinutes } from '@/lib/date';
 import { attendanceMessage, attendanceTone, subjectToneFor } from '@/lib/design';
 import { collegeApi, type AttendanceStatus } from '@/lib/api';
 
@@ -126,6 +126,10 @@ export default function SubjectDetailsScreen() {
   const palette = colors.subject[tone];
   const summaryTone = attendanceTone(data.summary.percentage, data.summary.total);
   const summaryCopy = attendanceMessage(data.summary.percentage, data.summary.total);
+  const todayKey = dateKey(new Date());
+  const isUpcoming = (session: Details['sessions'][number]) => session.date > todayKey || (session.date === todayKey && timeToMinutes(session.time) >= currentMinutes());
+  const upcomingSession = [...data.sessions].filter(isUpcoming).sort((left, right) => `${left.date}${left.time}`.localeCompare(`${right.date}${right.time}`))[0];
+  const recentSessions = data.sessions.filter((session) => !isUpcoming(session));
 
   return <Screen contentContainerStyle={styles.content}>
     <AppHeader
@@ -174,27 +178,49 @@ export default function SubjectDetailsScreen() {
         <Stat value={data.summary.absent} label="Missed" />
       </Card>
 
+      {upcomingSession ? <>
+        <View style={styles.sectionHeader}>
+          <AppText variant="heading2">Upcoming class</AppText>
+          <AppText variant="bodySmall" color={colors.neutral.textMuted} style={styles.sectionSub}>Your next scheduled lecture</AppText>
+        </View>
+        <LectureCard session={upcomingSession} tone={tone} onPress={() => router.push(`/classes/${upcomingSession.id}` as never)} featured />
+      </> : null}
+
       <View style={styles.sectionHeader}>
         <AppText variant="heading2">Recent classes</AppText>
         <AppText variant="bodySmall" color={colors.neutral.textMuted} style={styles.sectionSub}>Attendance history for this subject</AppText>
       </View>
 
-      {data.sessions.length === 0 ? <EmptyState icon="calendar-outline" title="No classes yet" message="Classes for this subject will appear here once they are scheduled." /> : <Card padding={0} style={styles.history}>
-        {data.sessions.map((session, index) => {
-          const status = statusConfig[session.status];
-          return <View key={session.id} style={styles.session}>
-            <View style={[styles.statusDot, { backgroundColor: colors.semantic[status.tone].solid }]} />
-            <View style={styles.sessionCopy}>
-              <AppText variant="label">{formatSessionDate(session.date)}</AppText>
-              <AppText variant="caption" color={colors.neutral.textMuted} style={styles.sessionMeta}>{session.time}–{session.endTime} · {session.room}</AppText>
-            </View>
-            <StatusPill label={status.label} tone={status.tone} icon={status.icon} />
-            {index < data.sessions.length - 1 ? <View style={styles.divider} /> : null}
-          </View>;
-        })}
+      {recentSessions.length === 0 ? <EmptyState icon="calendar-outline" title="No recent classes" message="Completed classes for this subject will appear here." /> : <Card padding={0} style={styles.history}>
+        {recentSessions.map((session, index) => (
+          <LectureCard
+            key={session.id}
+            session={session}
+            tone={tone}
+            onPress={() => router.push(`/classes/${session.id}` as never)}
+            divider={index < recentSessions.length - 1}
+          />
+        ))}
       </Card>}
     </>}
   </Screen>;
+}
+
+function LectureCard({ session, tone, onPress, divider = false, featured = false }: { session: Details['sessions'][number]; tone: ReturnType<typeof subjectToneFor>; onPress: () => void; divider?: boolean; featured?: boolean }) {
+  const status = statusConfig[session.status];
+  return <Pressable
+    accessibilityRole="button"
+    accessibilityLabel={`${formatSessionDate(session.date)}, ${session.time} to ${session.endTime}, ${status.label}`}
+    onPress={onPress}
+    style={({ pressed }) => [styles.session, featured && { backgroundColor: colors.subject[tone].surface, borderRadius: radius.card, borderCurve: 'continuous', padding: spacing[4] }, pressed && styles.sessionPressed]}>
+    <View style={[styles.statusDot, { backgroundColor: colors.semantic[status.tone].solid }]} />
+    <View style={styles.sessionCopy}>
+      <AppText variant="label">{formatSessionDate(session.date)}</AppText>
+      <AppText variant="caption" color={colors.neutral.textMuted} style={styles.sessionMeta}>{session.time}–{session.endTime} · {session.room}</AppText>
+    </View>
+    <StatusPill label={status.label} tone={status.tone} icon={status.icon} />
+    {divider ? <View style={styles.divider} /> : null}
+  </Pressable>;
 }
 
 function Stat({ value, label }: { value: number; label: string }) {
@@ -230,6 +256,7 @@ const styles = StyleSheet.create({
   sectionSub: { marginTop: spacing[1] },
   history: { overflow: 'hidden' },
   session: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
+  sessionPressed: { backgroundColor: colors.brand.skySoft },
   statusDot: { width: 9, height: 9, borderRadius: 5 },
   sessionCopy: { flex: 1 },
   sessionMeta: { marginTop: spacing[1], fontVariant: ['tabular-nums'] },

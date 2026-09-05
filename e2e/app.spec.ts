@@ -15,7 +15,7 @@ test.describe('College Kit E2E & Visual Verification', () => {
 
   test('Today screen loads with date, week strip, and classes', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Today’s classes')).toBeVisible();
+    await expect(page.locator('text=Schedule')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Timetable' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Attendance' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
@@ -69,6 +69,22 @@ test.describe('College Kit E2E & Visual Verification', () => {
       await expect(page.locator('text=Subject details')).toBeVisible();
       await expect(page.locator('text=Recent classes')).toBeVisible();
     }
+  });
+
+  test('Lecture details opens from a class and saves notes', async ({ page }) => {
+    const today = new Date();
+    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const schedule = await page.request.get(`http://localhost:4000/api/v1/schedule?date=${date}`).then((response) => response.json());
+    const session = schedule.sessions?.[0];
+    test.skip(!session, 'No scheduled lecture available for this test fixture');
+
+    await page.goto(`/classes/${session.id}`);
+    await expect(page.locator('text=Lecture')).toBeVisible();
+    await expect(page.getByText('Notes', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /View .* course/ })).toBeVisible();
+    await page.getByRole('textbox', { name: 'Lecture notes' }).fill('Review before the next class.');
+    await page.getByRole('button', { name: 'Save notes' }).click();
+    await expect(page.getByText('Notes saved', { exact: true })).toBeVisible();
   });
 
   test('Settings can be updated and saved', async ({ page }) => {

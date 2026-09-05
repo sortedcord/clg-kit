@@ -317,7 +317,8 @@ export default function TodayScreen() {
               state={entry.item.status}
               isNow={isNow}
               style={styles.event}
-              topAction={<IconButton icon="ellipsis-horizontal" label={`Options for ${entry.item.title}`} tone="ghost" onPress={() => setSelectedClass(entry.item)} />}
+              onPress={() => router.push(`/classes/${entry.item.id}` as never)}
+              topAction={<IconButton icon="ellipsis-horizontal" label={`Options for ${entry.item.title}`} tone="ghost" onPress={(event) => { event.stopPropagation(); setSelectedClass(entry.item); }} />}
               footer={entry.item.status !== 'cancelled' ? <AttendanceActions tone={subjectToneFor(entry.item.subjectId || entry.item.code, entry.item.color)} status={entry.item.status} onAttended={() => updateStatus(entry.item, 'attended')} onAbsent={() => updateStatus(entry.item, 'absent')} /> : null}
             />}
           </View>

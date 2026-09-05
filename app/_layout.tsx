@@ -66,6 +66,7 @@ export default function RootLayout() {
         <Stack.Screen name="account" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
         <Stack.Screen name="subjects/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="classes/[id]" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="dark" />
     </ThemeProvider>

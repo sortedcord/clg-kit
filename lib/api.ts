@@ -1,5 +1,5 @@
 export type AttendanceStatus = 'pending' | 'attended' | 'absent' | 'cancelled';
-export type Session = { id: number; subjectId: number; date: string; time: string; endTime: string; title: string; code: string; room: string; color: string; classType: string; status: AttendanceStatus };
+export type Session = { id: number; subjectId: number; date: string; time: string; endTime: string; title: string; code: string; room: string; color: string; classType: string; status: AttendanceStatus; note?: string; attendanceNote?: string | null };
 
 // Set EXPO_PUBLIC_API_URL to your computer's LAN address when testing on a phone,
 // e.g. EXPO_PUBLIC_API_URL=http://192.168.1.20:4000/api/v1
@@ -23,10 +23,12 @@ export const collegeApi = {
   updateSettings(data: { lectureMinutes: number; recessEnabled: boolean; recessStart: string; recessEnd: string; weekendSchedule: boolean }) { return request<{ lectureMinutes: number; recessEnabled: boolean; recessStart: string; recessEnd: string; weekendSchedule: boolean }>('/settings', { method: 'PATCH', body: JSON.stringify(data) }); },
   subjects() { return request<Subject[]>('/subjects'); },
   createSubject(data: { name: string; code: string; shortName?: string; color?: string; classType?: string; defaultRoom?: string }) { return request<{ id: number }>('/subjects', { method: 'POST', body: JSON.stringify(data) }); },
-  subject(id: number) { return request<{ id: number; name: string; code: string; shortName: string; color: string; classType: string; defaultRoom: string; summary: { total: number; attended: number; absent: number; percentage: number }; sessions: Array<{ id: number; date: string; time: string; endTime: string; room: string; status: AttendanceStatus }> }>(`/subjects/${id}`); },
+  subject(id: number) { return request<{ id: number; name: string; code: string; shortName: string; color: string; classType: string; defaultRoom: string; summary: { total: number; attended: number; absent: number; percentage: number }; sessions: Array<{ id: number; date: string; time: string; endTime: string; room: string; note: string; status: AttendanceStatus }> }>(`/subjects/${id}`); },
   updateSubject(id: number, data: { name: string; code: string; shortName: string; color?: string; classType?: string; defaultRoom?: string }) { return request<{ id: number }>(`/subjects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
   deleteSubject(id: number) { return request<{ id: number; deleted: boolean }>(`/subjects/${id}`, { method: 'DELETE' }); },
   schedule(date: string) { return request<{ date: string; sessions: Session[] }>(`/schedule?date=${date}`); },
+  session(id: number) { return request<Session & { note: string }>(`/schedule/${id}`); },
+  updateSession(id: number, data: { note?: string; startTime?: string; endTime?: string; room?: string }) { return request<{ id: number }>(`/schedule/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); },
   markAttendance(id: number, status: AttendanceStatus) { return request<{ id: number; status: AttendanceStatus }>(`/schedule/${id}/attendance`, { method: 'PUT', body: JSON.stringify({ status }) }); },
   removeClass(id: number) { return request<{ id: number; deleted: boolean }>(`/schedule/${id}`, { method: 'DELETE' }); },
   addOneOffClass(data: { subjectId: number; date: string; startTime: string; endTime: string; room: string }) { return request<{ id: number }>('/schedule', { method: 'POST', body: JSON.stringify(data) }); },

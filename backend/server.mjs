@@ -38,7 +38,7 @@ function migrate() {
       id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id),
       subject_id INTEGER NOT NULL REFERENCES subjects(id), timetable_class_id INTEGER REFERENCES timetable_classes(id),
       class_date TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT NOT NULL, room TEXT NOT NULL,
-      is_override INTEGER NOT NULL DEFAULT 0, is_removed INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      is_override INTEGER NOT NULL DEFAULT 0, is_removed INTEGER NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(user_id, timetable_class_id, class_date)
     );
     CREATE TABLE IF NOT EXISTS attendance (
@@ -62,6 +62,7 @@ function migrate() {
   if (!userColumns.includes('weekend_schedule')) db.exec('ALTER TABLE users ADD COLUMN weekend_schedule INTEGER NOT NULL DEFAULT 0');
   const sessionColumns = db.prepare('PRAGMA table_info(class_sessions)').all().map((column) => column.name);
   if (!sessionColumns.includes('is_removed')) db.exec('ALTER TABLE class_sessions ADD COLUMN is_removed INTEGER NOT NULL DEFAULT 0');
+  if (!sessionColumns.includes('note')) db.exec("ALTER TABLE class_sessions ADD COLUMN note TEXT NOT NULL DEFAULT ''");
   const templateColumns = db.prepare('PRAGMA table_info(timetable_classes)').all().map((column) => column.name);
   if (!templateColumns.includes('effective_from')) db.exec("ALTER TABLE timetable_classes ADD COLUMN effective_from TEXT NOT NULL DEFAULT '1970-01-01'");
   if (!templateColumns.includes('effective_to')) db.exec('ALTER TABLE timetable_classes ADD COLUMN effective_to TEXT');
@@ -83,8 +84,8 @@ function nextDateKey(date) { const next = new Date(`${date}T12:00:00`); next.set
 function previousDateKey(date) { const previous = new Date(`${date}T12:00:00`); previous.setDate(previous.getDate() - 1); return localDateKey(previous); }
 function readBody(req) { return new Promise((resolve, reject) => { let raw = ''; req.on('data', c => { raw += c; if (raw.length > 1_000_000) reject(new Error('Request body is too large')); }); req.on('end', () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error('Body must be valid JSON')); } }); req.on('error', reject); }); }
 function sessionRows(date) {
-  return db.prepare(`SELECT cs.id, cs.class_date AS date, cs.start_time AS time, cs.end_time AS endTime, cs.room, cs.is_override AS isOverride,
-    s.id AS subjectId, s.name AS title, s.code, s.color, s.class_type AS classType, COALESCE(a.status, 'pending') AS status, a.note
+  return db.prepare(`SELECT cs.id, cs.class_date AS date, cs.start_time AS time, cs.end_time AS endTime, cs.room, cs.is_override AS isOverride, cs.note,
+    s.id AS subjectId, s.name AS title, s.code, s.color, s.class_type AS classType, COALESCE(a.status, 'pending') AS status, a.note AS attendanceNote
     FROM class_sessions cs JOIN subjects s ON s.id = cs.subject_id LEFT JOIN attendance a ON a.session_id = cs.id
     WHERE cs.user_id = ? AND cs.class_date = ? AND cs.is_removed = 0 ORDER BY cs.start_time`).all(STUDENT_ID, date);
 }
@@ -139,6 +140,16 @@ const server = createServer(async (req, res) => {
       return json(res, 201, db.prepare('SELECT id FROM class_sessions WHERE id = ?').get(record.lastInsertRowid));
     }
     const scheduleMatch = path.match(/^\/api\/v1\/schedule\/(\d+)$/);
+    if (req.method === 'GET' && scheduleMatch) {
+      const id = Number(scheduleMatch[1]);
+      const session = db.prepare(`SELECT cs.id, cs.class_date AS date, cs.start_time AS time, cs.end_time AS endTime, cs.room, cs.note,
+        s.id AS subjectId, s.name AS title, s.code, s.color, s.class_type AS classType,
+        COALESCE(a.status, 'pending') AS status
+        FROM class_sessions cs JOIN subjects s ON s.id = cs.subject_id LEFT JOIN attendance a ON a.session_id = cs.id
+        WHERE cs.id = ? AND cs.user_id = ? AND cs.is_removed = 0`).get(id, STUDENT_ID);
+      if (!session) return error(res, 404, 'Class session not found');
+      return json(res, 200, session);
+    }
     if (req.method === 'DELETE' && scheduleMatch) {
       const id = Number(scheduleMatch[1]);
       const session = db.prepare('SELECT timetable_class_id AS timetableClassId FROM class_sessions WHERE id = ? AND user_id = ?').get(id, STUDENT_ID);
@@ -153,7 +164,7 @@ const server = createServer(async (req, res) => {
       const existing = db.prepare('SELECT id FROM class_sessions WHERE id = ? AND user_id = ?').get(id, STUDENT_ID);
       if (!existing) return error(res, 404, 'Class session not found');
       const fields = []; const values = [];
-      for (const [key, column] of Object.entries({ startTime: 'start_time', endTime: 'end_time', room: 'room' })) if (body[key] !== undefined) { fields.push(`${column} = ?`); values.push(typeof body[key] === 'string' ? body[key].trim() : body[key]); }
+      for (const [key, column] of Object.entries({ startTime: 'start_time', endTime: 'end_time', room: 'room', note: 'note' })) if (body[key] !== undefined) { fields.push(`${column} = ?`); values.push(typeof body[key] === 'string' ? body[key].trim() : body[key]); }
       if (!fields.length) return error(res, 400, 'No editable fields supplied');
       db.prepare(`UPDATE class_sessions SET ${fields.join(', ')}, is_override = 1 WHERE id = ?`).run(...values, id);
       return json(res, 200, { id });
@@ -233,9 +244,9 @@ const server = createServer(async (req, res) => {
       const id = Number(subjectMatch[1]);
       const subject = db.prepare('SELECT id, name, code, short_name AS shortName, color, class_type AS classType, default_room AS defaultRoom FROM subjects WHERE id = ? AND user_id = ?').get(id, STUDENT_ID);
       if (!subject) return error(res, 404, 'Subject not found');
-      const sessions = db.prepare(`SELECT cs.id, cs.class_date AS date, cs.start_time AS time, cs.end_time AS endTime, cs.room,
+      const sessions = db.prepare(`SELECT cs.id, cs.class_date AS date, cs.start_time AS time, cs.end_time AS endTime, cs.room, cs.note,
         COALESCE(a.status, 'pending') AS status FROM class_sessions cs LEFT JOIN attendance a ON a.session_id = cs.id
-        WHERE cs.subject_id = ? AND cs.user_id = ? ORDER BY cs.class_date DESC, cs.start_time DESC`).all(id, STUDENT_ID);
+        WHERE cs.subject_id = ? AND cs.user_id = ? AND cs.is_removed = 0 ORDER BY cs.class_date DESC, cs.start_time DESC`).all(id, STUDENT_ID);
       const eligible = sessions.filter((session) => session.status === 'attended' || session.status === 'absent');
       const attended = eligible.filter((session) => session.status === 'attended').length;
       return json(res, 200, { ...subject, summary: { total: eligible.length, attended, absent: eligible.filter((session) => session.status === 'absent').length, percentage: eligible.length ? Math.round(attended / eligible.length * 100) : 0 }, sessions });
