@@ -78,8 +78,15 @@ export default function TodayScreen() {
     collegeApi.profile().then((result) => {
       if (!active) return;
       setProfile(result);
-      setWeekendSchedule(Boolean(result.weekendSchedule));
-      if (!result.weekendSchedule) setActiveDate((current) => current.getDay() === 0 || current.getDay() === 6 ? mondayOfWeek(current) : current);
+      const weekendsEnabled = Boolean(result.weekendSchedule);
+      setWeekendSchedule(weekendsEnabled);
+      if (!weekendsEnabled) {
+        setActiveDate((current) => {
+          if (current.getDay() === 6) return addDays(current, 2);
+          if (current.getDay() === 0) return addDays(current, 1);
+          return current;
+        });
+      }
     }).catch(() => undefined);
     return () => { active = false; };
   }, []));
@@ -139,13 +146,26 @@ export default function TodayScreen() {
   const updateStatus = (session: Session, status: AttendanceStatus) => {
     const previous = classes;
     setClasses((items) => items.map((item) => item.id === session.id ? { ...item, status } : item));
+    setSummary((current) => {
+      const wasHeld = session.status === 'attended' || session.status === 'absent';
+      const isHeld = status === 'attended' || status === 'absent';
+      const total = current.total + (isHeld ? 1 : 0) - (wasHeld ? 1 : 0);
+      const attended = current.attended + (status === 'attended' ? 1 : 0) - (session.status === 'attended' ? 1 : 0);
+      return { total, attended, percentage: total ? Math.round((attended / total) * 100) : 0 };
+    });
     collegeApi.markAttendance(session.id, status)
       .then(() => {
         if (Platform.OS !== 'web') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setRefresh((v) => v + 1);
       })
       .catch((error: Error) => {
         setClasses(previous);
+        setSummary((current) => {
+          const wasHeld = session.status === 'attended' || session.status === 'absent';
+          const isHeld = status === 'attended' || status === 'absent';
+          const total = current.total + (wasHeld ? 1 : 0) - (isHeld ? 1 : 0);
+          const attended = current.attended + (session.status === 'attended' ? 1 : 0) - (status === 'attended' ? 1 : 0);
+          return { total, attended, percentage: total ? Math.round((attended / total) * 100) : 0 };
+        });
         Alert.alert('Couldn’t save attendance', error.message);
       });
   };
@@ -177,10 +197,13 @@ export default function TodayScreen() {
   const currentTimeLabel = formatCurrentTime();
   const pendingCount = classes.filter((item) => item.status === 'pending').length;
   const metricTone = summary.total ? (insightTone === 'neutral' ? 'brand' : insightTone) : 'brand';
+  const collapseCalendar = () => {
+    if (calendarExpanded) setCalendarExpanded(false);
+  };
 
   return <Screen scroll={false} contentContainerStyle={styles.content}>
     <View style={styles.stickyHeader}>
-    <View style={styles.headerRow}>
+    <View style={styles.headerRow} onTouchStart={collapseCalendar}>
       <AppHeader
         title={formatHeaderDate(activeDate)}
         style={styles.headerTitle}
@@ -196,7 +219,7 @@ export default function TodayScreen() {
       ) : null}
     </View>
 
-    <View style={styles.attendanceOverview}>
+    <View style={styles.attendanceOverview} onTouchStart={collapseCalendar}>
       <View style={styles.overviewPrimary}>
         <AttendanceRing
           percentage={summary.percentage}
@@ -219,7 +242,7 @@ export default function TodayScreen() {
       </View>
     </View>
 
-    <View style={styles.pickerContainer}>
+    <View style={styles.pickerContainer} onTouchStart={(event) => event.stopPropagation()}>
       {calendarExpanded ? (
         <InlineCalendarWidget
           month={calendarMonth}
@@ -250,19 +273,18 @@ export default function TodayScreen() {
       </Pressable>
     </View>
 
-    <View style={styles.sectionHeader}>
+    <View style={styles.sectionHeader} onTouchStart={collapseCalendar}>
       <View style={styles.sectionCopy}>
-        <AppText variant="heading2">{isToday ? 'Today’s classes' : `${formatDayHeading(activeDate).split(',')[0]}’s classes`}</AppText>
+        <AppText variant="heading2">Schedule</AppText>
         <AppText variant="bodySmall" color={colors.neutral.textMuted} style={styles.sectionSubtitle}>
           {classes.length ? `${classes.length} ${classes.length === 1 ? 'class' : 'classes'}${pendingCount ? ` · ${pendingCount} to mark` : ''}` : 'Your agenda for this date'}
         </AppText>
       </View>
-      <IconButton icon="add" label="Add a class" onPress={() => setAddClassOpen(true)} />
     </View>
 
     </View>
 
-    <ScrollView style={styles.classList} contentContainerStyle={styles.classListContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.classList} contentContainerStyle={styles.classListContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" onTouchStart={collapseCalendar}>
     {loadError ? <InlineBanner title="Couldn’t load this day" message={loadError} tone="danger" action={<Button label="Retry" size="compact" variant="ghost" fullWidth={false} onPress={loadSchedule} />} /> : null}
     {loading ? <Card tone="skySoft" style={styles.loading}><ActivityIndicator color={colors.brand.cobalt} /><AppText variant="bodySmall" color={colors.neutral.textSecondary}>Loading your classes…</AppText></Card> : null}
     {!loading && !loadError && classes.length === 0 && !recessEnabled ? <EmptyState icon="calendar-clear-outline" title="No classes scheduled" message="Enjoy the break, or add a one-off class for this date." action={<Button label="Add a class" variant="secondary" onPress={() => setAddClassOpen(true)} leading={<Ionicons name="add" size={18} color={colors.brand.cobalt} />} />} /> : null}
@@ -453,7 +475,7 @@ const styles = StyleSheet.create({
   // Bottom padding belongs to the scrollable class content, not this fixed shell.
   content: { paddingTop: spacing[1], paddingBottom: 0 },
 
-  stickyHeader: { flexShrink: 0 },
+  stickyHeader: { flexShrink: 0, position: 'relative', zIndex: 20, elevation: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing[2], marginBottom: spacing[3] },
   headerTitle: { flex: 1, minHeight: 0 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingTop: spacing[1] },
@@ -482,6 +504,9 @@ const styles = StyleSheet.create({
   overviewTargetValue: { fontVariant: ['tabular-nums'] },
   pickerContainer: {
     marginTop: spacing[1],
+    position: 'relative',
+    zIndex: 30,
+    elevation: 30,
     borderRadius: radius.feature,
     borderCurve: 'continuous',
     backgroundColor: colors.brand.skySoft,

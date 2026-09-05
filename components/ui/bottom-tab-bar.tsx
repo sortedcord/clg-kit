@@ -57,7 +57,7 @@ export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
               <Ionicons
                 name={focused ? config.activeIcon : config.icon}
                 size={21}
-                color={focused ? colors.brand.ink : colors.neutral.textSecondary}
+                color={focused ? colors.neutral.surface : colors.neutral.textSecondary}
               />
             </Pressable>
           );
@@ -69,7 +69,7 @@ export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
         accessibilityLabel="Add a class"
         onPress={addClass}
         style={({ pressed }) => [styles.addButton, pressed && styles.addPressed]}>
-        <Ionicons name="add" size={26} color={colors.brand.ink} />
+        <Ionicons name="add" size={28} color={colors.neutral.surface} />
       </Pressable>
     </View>
   );
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   },
   navigationGroup: {
     flex: 1,
-    minHeight: 58,
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[1],
@@ -112,16 +112,16 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
   },
   tabActive: {
-    backgroundColor: colors.brand.coral,
+    backgroundColor: colors.brand.cobalt,
   },
   addButton: {
-    width: 58,
-    height: 58,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.feature,
     borderCurve: 'continuous',
-    backgroundColor: colors.brand.coral,
+    backgroundColor: colors.brand.cobalt,
     ...shadow.floating,
   },
   pressed: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   addPressed: {
-    backgroundColor: colors.brand.coralSoft,
+    backgroundColor: colors.brand.cobaltPressed,
     transform: [{ scale: 0.96 }],
   },
 });
