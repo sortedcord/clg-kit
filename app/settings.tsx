@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Switch, View } from 'react-native';
 
@@ -17,8 +16,9 @@ import {
 } from '@/components/ui';
 import { collegeApi } from '@/lib/api';
 
+const profileInitials = (value: string) => value.trim().split(/\s+/).filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2);
+
 export default function SettingsScreen() {
-  const router = useRouter();
   const [name, setName] = useState('');
   const [college, setCollege] = useState('');
   const [programme, setProgramme] = useState('');
@@ -84,6 +84,9 @@ export default function SettingsScreen() {
     {loadError ? <InlineBanner title="Couldn’t load settings" message={loadError} tone="danger" action={<Button label="Retry" variant="ghost" size="compact" fullWidth={false} onPress={load} />} style={styles.firstBlock} /> : null}
 
     {!loading && !loadError ? <>
+      <AppText variant="heading3" style={styles.sectionTitle}>Profile</AppText>
+      <ProfileSummary name={name} college={college} programme={programme} semester={semester} />
+
       <Card tone="sky" style={styles.intro}>
         <View style={styles.introIcon}><Ionicons name="time-outline" size={24} color={colors.brand.cobalt} /></View>
         <View style={styles.introCopy}>
@@ -95,7 +98,7 @@ export default function SettingsScreen() {
       {saved ? <InlineBanner title="Settings saved" message="New classes will use these defaults." tone="success" style={styles.feedback} /> : null}
       {formError ? <InlineBanner title="Check your settings" message={formError} tone="danger" style={styles.feedback} /> : null}
 
-      <AppText variant="heading3" style={styles.sectionTitle}>Profile</AppText>
+      <AppText variant="heading3" style={styles.sectionTitle}>Edit profile</AppText>
       <Card style={styles.card}>
         <View style={styles.fields}>
           <FormField label="Your name" value={name} onChangeText={(value) => { setName(value); setSaved(false); }} placeholder="Your name" autoCapitalize="words" />
@@ -157,18 +160,38 @@ export default function SettingsScreen() {
       </Card>
 
       <Button label="Save settings" loading={saving} haptic="success" onPress={save} style={styles.save} />
-
-      <AppText variant="heading3" style={styles.sectionTitle}>Account</AppText>
-      <Card style={styles.card} padding={0}>
-        <Button
-          label="View full account profile"
-          variant="secondary"
-          onPress={() => router.push('/account' as never)}
-          leading={<Ionicons name="person-outline" size={18} color={colors.brand.cobalt} />}
-        />
-      </Card>
     </> : null}
   </Screen>;
+}
+
+function ProfileSummary({ name, college, programme, semester }: { name: string; college: string; programme: string; semester: string }) {
+  return <Card tone="sky" style={styles.profileSummary}>
+    <View style={styles.profileIdentity}>
+      <View style={styles.profileAvatar}>
+        <AppText variant="heading2">{profileInitials(name) || '?'}</AppText>
+      </View>
+      <View style={styles.profileCopy}>
+        <AppText variant="heading3" numberOfLines={2}>{name || 'Your profile'}</AppText>
+        <AppText variant="bodySmall" color={colors.neutral.textSecondary} style={styles.profileCollege} numberOfLines={2}>{college || 'Add your college'}</AppText>
+      </View>
+    </View>
+    <View style={styles.profileDetails}>
+      <View style={styles.profileDetail}>
+        <Ionicons name="book-outline" size={17} color={colors.brand.cobalt} />
+        <View style={styles.profileDetailCopy}>
+          <AppText variant="caption" color={colors.neutral.textMuted}>Programme</AppText>
+          <AppText variant="label" numberOfLines={2}>{programme || 'Not added'}</AppText>
+        </View>
+      </View>
+      <View style={styles.profileDetail}>
+        <Ionicons name="calendar-outline" size={17} color={colors.brand.cobalt} />
+        <View style={styles.profileDetailCopy}>
+          <AppText variant="caption" color={colors.neutral.textMuted}>Semester</AppText>
+          <AppText variant="label" numberOfLines={2}>{semester || 'Not added'}</AppText>
+        </View>
+      </View>
+    </View>
+  </Card>;
 }
 
 const styles = StyleSheet.create({
@@ -176,7 +199,15 @@ const styles = StyleSheet.create({
   header: { paddingTop: spacing[2], minHeight: 0 },
   loading: { minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
   firstBlock: { marginTop: spacing[4] },
-  intro: { marginTop: spacing[3], flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
+  profileSummary: { marginTop: spacing[3] },
+  profileIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
+  profileAvatar: { width: 64, height: 64, borderRadius: radius.feature, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
+  profileCopy: { flex: 1 },
+  profileCollege: { marginTop: spacing[1] },
+  profileDetails: { marginTop: spacing[5], paddingTop: spacing[4], borderTopWidth: 1, borderTopColor: 'rgba(6, 20, 48, 0.10)', gap: spacing[3] },
+  profileDetail: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3] },
+  profileDetailCopy: { flex: 1, gap: 2 },
+  intro: { marginTop: spacing[4], flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
   introIcon: { width: 48, height: 48, borderRadius: radius.card, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
   introCopy: { flex: 1 },
   introText: { marginTop: spacing[1] },

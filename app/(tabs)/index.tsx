@@ -204,19 +204,7 @@ export default function TodayScreen() {
   return <Screen scroll={false} contentContainerStyle={styles.content}>
     <View style={styles.stickyHeader}>
     <View style={styles.headerRow} onTouchStart={collapseCalendar}>
-      <AppHeader
-        title={formatHeaderDate(activeDate)}
-        style={styles.headerTitle}
-      />
-      {profile?.name ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open account profile"
-          onPress={() => router.push('/account' as never)}
-          style={({ pressed }) => [styles.avatar, pressed && styles.avatarPressed]}>
-          <AppText variant="label" color={colors.brand.cobalt}>{profile.initials || '?'}</AppText>
-        </Pressable>
-      ) : null}
+      <AppHeader title={formatHeaderDate(activeDate)} />
     </View>
 
     <View style={styles.attendanceOverview} onTouchStart={collapseCalendar}>
@@ -484,11 +472,7 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing[1], paddingBottom: 0 },
 
   stickyHeader: { flexShrink: 0, position: 'relative', zIndex: 20, elevation: 20 },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing[2], marginBottom: spacing[3] },
-  headerTitle: { flex: 1, minHeight: 0 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingTop: spacing[1] },
-  avatar: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', backgroundColor: colors.brand.cobaltSoft, alignItems: 'center', justifyContent: 'center' },
-  avatarPressed: { opacity: 0.78 },
+  headerRow: { marginBottom: spacing[3] },
   attendanceOverview: {
     marginTop: spacing[3],
     marginBottom: spacing[3],
