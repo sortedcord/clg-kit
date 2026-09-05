@@ -9,6 +9,7 @@ export { EmptyState } from './empty-state';
 export { FormField } from './form-field';
 export { IconButton } from './icon-button';
 export { InlineBanner } from './inline-banner';
+export { MorphingDayCalendarPicker } from './morphing-calendar';
 export { ProgressBar } from './progress-bar';
 export { RecessCard } from './recess-card';
 export { ScheduleEventCard } from './schedule-event-card';

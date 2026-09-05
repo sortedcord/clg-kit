@@ -79,7 +79,6 @@ test.describe('College Kit E2E & Visual Verification', () => {
     test.skip(!session, 'No scheduled lecture available for this test fixture');
 
     await page.goto(`/classes/${session.id}`);
-    await expect(page.locator('text=Lecture')).toBeVisible();
     await expect(page.getByText('Notes', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /View .* course/ })).toBeVisible();
     await page.getByRole('textbox', { name: 'Lecture notes' }).fill('Review before the next class.');

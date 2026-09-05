@@ -10,6 +10,7 @@ export default function TabLayout() {
         tabBar={(props) => <BottomTabBar {...props} />}
         screenOptions={{
           headerShown: false,
+          animation: 'fade',
           // The visible dock is independently absolute; this removes React Navigation's reserved tab-bar scene area.
           tabBarStyle: { position: 'absolute', height: 0, backgroundColor: 'transparent', borderTopWidth: 0, elevation: 0 },
         }}>

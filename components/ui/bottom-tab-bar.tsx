@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 import { useGlobalAddClass } from '@/components/global-add-class';
 import { colors, radius, shadow, size, spacing } from './tokens';
@@ -12,6 +13,90 @@ const tabConfig = {
   attendance: { label: 'Attendance', icon: 'pie-chart-outline', activeIcon: 'pie-chart' },
   settings: { label: 'Settings', icon: 'settings-outline', activeIcon: 'settings' },
 } as const;
+
+function TabItem({
+  route,
+  focused,
+  onPress,
+  onLongPress,
+}: {
+  route: { key: string; name: string };
+  focused: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
+  const config = tabConfig[route.name as keyof typeof tabConfig];
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.88, { damping: 12, stiffness: 260 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 260 });
+  };
+
+  if (!config) return null;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={config.label}
+      accessibilityState={{ selected: focused }}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={[styles.tabPressable]}>
+      <Animated.View style={[styles.tab, focused && styles.tabActive, animStyle]}>
+        <Ionicons
+          name={focused ? config.activeIcon : config.icon}
+          size={21}
+          color={focused ? colors.neutral.surface : colors.neutral.textSecondary}
+        />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+function AddButton({ onPress }: { onPress: () => void }) {
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.9, { damping: 12, stiffness: 260 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 12, stiffness: 260 });
+  };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Add a class"
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={onPress}>
+      <Animated.View style={[styles.addButton, animStyle]}>
+        <Ionicons name="add" size={28} color={colors.neutral.surface} />
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 /** Compact floating navigation group paired with a persistent global add action. */
 export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
@@ -32,9 +117,6 @@ export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
       <View style={styles.navigationGroup}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
-          const config = tabConfig[route.name as keyof typeof tabConfig];
-          if (!config) return null;
-
           const onPress = () => {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!focused && !event.defaultPrevented) {
@@ -42,35 +124,21 @@ export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
               navigation.navigate(route.name);
             }
           };
-
           const onLongPress = () => navigation.emit({ type: 'tabLongPress', target: route.key });
 
           return (
-            <Pressable
+            <TabItem
               key={route.key}
-              accessibilityRole="button"
-              accessibilityLabel={config.label}
-              accessibilityState={{ selected: focused }}
+              route={route}
+              focused={focused}
               onPress={onPress}
               onLongPress={onLongPress}
-              style={({ pressed }) => [styles.tab, focused && styles.tabActive, pressed && styles.pressed]}>
-              <Ionicons
-                name={focused ? config.activeIcon : config.icon}
-                size={21}
-                color={focused ? colors.neutral.surface : colors.neutral.textSecondary}
-              />
-            </Pressable>
+            />
           );
         })}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Add a class"
-        onPress={addClass}
-        style={({ pressed }) => [styles.addButton, pressed && styles.addPressed]}>
-        <Ionicons name="add" size={28} color={colors.neutral.surface} />
-      </Pressable>
+      <AddButton onPress={addClass} />
     </View>
   );
 }
@@ -102,10 +170,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.skySoft,
     ...shadow.floating,
   },
+  tabPressable: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tab: {
     minWidth: size.touchTargetMin,
     minHeight: size.touchTargetMin,
-    flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.control,
@@ -123,13 +196,5 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     backgroundColor: colors.brand.cobalt,
     ...shadow.floating,
-  },
-  pressed: {
-    opacity: 0.76,
-    transform: [{ scale: 0.97 }],
-  },
-  addPressed: {
-    backgroundColor: colors.brand.cobaltPressed,
-    transform: [{ scale: 0.96 }],
   },
 });

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { AppText } from './app-text';
-import { colors, motion, size, spacing } from './tokens';
+import { colors, size, spacing } from './tokens';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'regular' | 'compact';
@@ -36,6 +37,25 @@ export function Button({ label, onPress, variant = 'primary', size: buttonSize =
   const labelColor = unavailable ? colors.neutral.textDisabled : activeLabelColor;
   const spinnerColor = unavailable ? colors.neutral.textDisabled : activeLabelColor;
 
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    if (unavailable) return;
+    scale.value = withSpring(0.96, { damping: 14, stiffness: 220 });
+  };
+
+  const handlePressOut = () => {
+    if (unavailable) return;
+    scale.value = withSpring(1, { damping: 14, stiffness: 220 });
+  };
+
   return <Pressable
     testID={testID}
     accessibilityRole="button"
@@ -43,9 +63,13 @@ export function Button({ label, onPress, variant = 'primary', size: buttonSize =
     accessibilityHint={accessibilityHint}
     accessibilityState={{ disabled: unavailable, busy: loading }}
     disabled={unavailable}
+    onPressIn={handlePressIn}
+    onPressOut={handlePressOut}
     onPress={(event) => { feedback(haptic); onPress(event); }}
-    style={({ pressed }) => [styles.base, buttonSize === 'compact' && styles.compact, variantStyles[variant], fullWidth && styles.fullWidth, unavailable && styles.disabled, pressed && !unavailable && styles.pressed, style]}>
-    {loading ? <ActivityIndicator color={spinnerColor} /> : <><View style={styles.icon}>{leading}</View><AppText variant="label" color={labelColor}>{label}</AppText><View style={styles.icon}>{trailing}</View></>}
+    style={[fullWidth && styles.fullWidth]}>
+    <Animated.View style={[styles.base, buttonSize === 'compact' && styles.compact, variantStyles[variant], fullWidth && styles.fullWidth, unavailable && styles.disabled, animStyle, style]}>
+      {loading ? <ActivityIndicator color={spinnerColor} /> : <><View style={styles.icon}>{leading}</View><AppText variant="label" color={labelColor}>{label}</AppText><View style={styles.icon}>{trailing}</View></>}
+    </Animated.View>
   </Pressable>;
 }
 
@@ -53,7 +77,6 @@ const styles = StyleSheet.create({
   base: { minHeight: size.control, paddingHorizontal: spacing[5], borderRadius: 14, borderCurve: 'continuous', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2] },
   compact: { minHeight: 40, paddingHorizontal: spacing[4], borderRadius: 12, borderCurve: 'continuous' },
   fullWidth: { alignSelf: 'stretch' },
-  pressed: { transform: [{ scale: motion.pressedScale }] },
   disabled: { backgroundColor: colors.neutral.surfaceSubtle, borderColor: colors.neutral.surfaceSubtle },
   icon: { minWidth: 0, alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { AppText } from './app-text';
 import { colors, radius, spacing, type SubjectTone } from './tokens';
 
@@ -29,6 +30,26 @@ export function ScheduleEventCard({ title, timeRange, subjectTone, room, kind, c
   const attended = state === 'attended';
   const backgroundColor = cancelled ? colors.neutral.surfaceSubtle : absent ? colors.semantic.danger.soft : subject.surface;
   const foreground = cancelled ? colors.neutral.textMuted : absent ? colors.semantic.danger.text : subject.accent;
+
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scale: scale.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    if (!onPress) return;
+    scale.value = withSpring(0.97, { damping: 14, stiffness: 240 });
+  };
+
+  const handlePressOut = () => {
+    if (!onPress) return;
+    scale.value = withSpring(1, { damping: 14, stiffness: 240 });
+  };
+
   const content = <>
     <View style={styles.titleRow}>
       <AppText variant="title" color={foreground} numberOfLines={2} style={styles.title}>{title}</AppText>
@@ -65,8 +86,24 @@ export function ScheduleEventCard({ title, timeRange, subjectTone, room, kind, c
   </>;
 
   const cardStyle = [styles.card, { backgroundColor }, cancelled && styles.cancelled, style];
-  if (!onPress) return <View testID={testID} accessibilityLabel={`${title}, ${timeRange}${room ? `, ${room}` : ''}`} style={cardStyle}>{content}</View>;
-  return <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${title}, ${timeRange}${room ? `, ${room}` : ''}`} onPress={onPress} style={({ pressed }) => [cardStyle, pressed && styles.pressed]}>{content}</Pressable>;
+
+  if (!onPress) {
+    return <View testID={testID} accessibilityLabel={`${title}, ${timeRange}${room ? `, ${room}` : ''}`} style={cardStyle}>{content}</View>;
+  }
+
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${timeRange}${room ? `, ${room}` : ''}`}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={onPress}>
+      <Animated.View style={[cardStyle, animStyle]}>
+        {content}
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 function ParticipantStack({ accent }: { accent: string }) {
@@ -95,5 +132,4 @@ const styles = StyleSheet.create({
   more: { marginLeft: spacing[2] },
   footer: { marginTop: spacing[3] },
   cancelled: { opacity: 0.72 },
-  pressed: { opacity: 0.78 },
 });
