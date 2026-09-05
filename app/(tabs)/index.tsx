@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AddClassModal } from '@/components/add-class-modal';
+import { useGlobalAddClass } from '@/components/global-add-class';
 import {
   AppHeader,
   AppText,
@@ -50,6 +51,7 @@ const daysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth()
 
 export default function TodayScreen() {
   const router = useRouter();
+  const { revision: globalAddRevision } = useGlobalAddClass();
   const [activeDate, setActiveDate] = useState(() => new Date());
   const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
   const [classes, setClasses] = useState<Session[]>([]);
@@ -92,6 +94,10 @@ export default function TodayScreen() {
   }, [selectedDateKey]);
 
   useEffect(() => { loadSchedule(); }, [loadSchedule, refresh]);
+
+  useEffect(() => {
+    if (globalAddRevision > 0) setRefresh((current) => current + 1);
+  }, [globalAddRevision]);
 
   useEffect(() => {
     collegeApi.attendanceSummary().then(({ subjects }) => {

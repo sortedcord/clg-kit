@@ -25,7 +25,7 @@ test.describe('College Kit E2E & Visual Verification', () => {
     await page.goto('/');
 
     // Navigate to Timetable
-    await page.locator('text=Timetable').click();
+    await page.getByRole('button', { name: 'Timetable' }).click();
     await expect(page.locator('text=Week of')).toBeVisible();
 
     // Navigate to Attendance
@@ -41,6 +41,16 @@ test.describe('College Kit E2E & Visual Verification', () => {
     // Navigate back to Today
     await page.getByRole('button', { name: 'Today' }).click();
     await expect(page.locator('text=classes').first()).toBeVisible();
+  });
+
+  test('Global plus action opens Add Class from another tab', async ({ page }) => {
+    await page.goto('/attendance');
+    await expect(page.locator('text=By subject')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Add a class' }).click();
+
+    await expect(page.locator('text=Add a class').first()).toBeVisible();
+    await expect(page.locator('text=One-off class for')).toBeVisible();
   });
 
   test('Account screen displays profile information correctly', async ({ page }) => {
