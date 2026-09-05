@@ -25,7 +25,17 @@ import {
   spacing,
   type WeekDay,
 } from '@/components/ui';
-import { addDays, currentMinutes, dateKey, formatDayHeading, mondayOfWeek, timeToMinutes } from '@/lib/date';
+import {
+  addDays,
+  currentMinutes,
+  dateKey,
+  formatCurrentTime,
+  formatDayHeading,
+  formatHeaderDate,
+  formatMonthYear,
+  mondayOfWeek,
+  timeToMinutes,
+} from '@/lib/date';
 import { attendanceMessage, attendanceTone, subjectToneFor } from '@/lib/design';
 import { collegeApi, type AttendanceStatus, type Profile, type Session } from '@/lib/api';
 
@@ -46,10 +56,11 @@ export default function TodayScreen() {
   const [summary, setSummary] = useState<AttendanceSummary>(emptySummary);
   const [weekendSchedule, setWeekendSchedule] = useState(false);
   const [weekMarkers, setWeekMarkers] = useState<Record<string, DayMarker>>({});
+  const [monthMarkers, setMonthMarkers] = useState<Record<string, DayMarker>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [refresh, setRefresh] = useState(0);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   const [addClassOpen, setAddClassOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Session | null>(null);
 
@@ -111,12 +122,20 @@ export default function TodayScreen() {
     .filter((date) => weekendSchedule || (date.getDay() !== 0 && date.getDay() !== 6))
     .map((date) => ({ date, marker: weekMarkers[dateKey(date)] ?? 'none' }));
 
+  const calendarMonthKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}`;
+  useEffect(() => {
+    collegeApi.attendanceMarkers(calendarMonthKey)
+      .then(({ markers }) => setMonthMarkers(markers))
+      .catch(() => setMonthMarkers({}));
+  }, [calendarMonthKey, refresh]);
+
   const updateStatus = (session: Session, status: AttendanceStatus) => {
     const previous = classes;
     setClasses((items) => items.map((item) => item.id === session.id ? { ...item, status } : item));
     collegeApi.markAttendance(session.id, status)
       .then(() => {
         if (Platform.OS !== 'web') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setRefresh((v) => v + 1);
       })
       .catch((error: Error) => {
         setClasses(previous);
@@ -149,24 +168,63 @@ export default function TodayScreen() {
   ].sort((left, right) => left.start.localeCompare(right.start) || (left.type === 'recess' ? -1 : 1));
   const activeTimelineIndex = isToday ? timelineItems.findIndex((item) => timeToMinutes(item.start) <= now && now < timeToMinutes(item.end)) : -1;
   const insertionIndex = isToday ? (activeTimelineIndex >= 0 ? activeTimelineIndex : timelineItems.findIndex((item) => timeToMinutes(item.start) > now)) : -1;
-  const currentTimeLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date());
+  const currentTimeLabel = formatCurrentTime();
   const pendingCount = classes.filter((item) => item.status === 'pending').length;
 
   return <Screen scroll={false} contentContainerStyle={styles.content}>
     <View style={styles.stickyHeader}>
-    <AppHeader title={new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(activeDate)} />
-
-    <View style={styles.dateActions}>
-      {!isToday ? <Button label="Today" variant="ghost" size="compact" fullWidth={false} onPress={() => setActiveDate(new Date())} /> : null}
-      <IconButton icon="calendar-outline" label="Open calendar" tone="sky" onPress={() => { setCalendarMonth(startOfMonth(activeDate)); setCalendarOpen(true); }} />
+    <View style={styles.headerRow}>
+      <AppHeader
+        title={formatHeaderDate(activeDate)}
+        style={styles.headerTitle}
+      />
+      {profile?.name ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open account profile"
+          onPress={() => router.push('/account' as never)}
+          style={({ pressed }) => [styles.avatar, pressed && styles.avatarPressed]}>
+          <AppText variant="label" color={colors.brand.cobalt}>{profile.initials || '?'}</AppText>
+        </Pressable>
+      ) : null}
     </View>
-    <WeekStrip days={visibleDays} selectedDateKey={selectedDateKey} todayDateKey={todayKey} onSelect={setActiveDate} />
+
+    <View style={styles.pickerContainer}>
+      {calendarExpanded ? (
+        <InlineCalendarWidget
+          month={calendarMonth}
+          selectedDateKey={selectedDateKey}
+          todayKey={todayKey}
+          markers={monthMarkers}
+          allowWeekends={weekendSchedule}
+          onMonthChange={setCalendarMonth}
+          onSelect={(date) => {
+            setActiveDate(date);
+            setCalendarExpanded(false);
+          }}
+        />
+      ) : (
+        <WeekStrip days={visibleDays} selectedDateKey={selectedDateKey} todayDateKey={todayKey} onSelect={setActiveDate} style={styles.weekStrip} />
+      )}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={calendarExpanded ? 'Collapse calendar' : 'Expand calendar'}
+        onPress={() => {
+          if (!calendarExpanded) {
+            setCalendarMonth(startOfMonth(activeDate));
+          }
+          setCalendarExpanded((v) => !v);
+        }}
+        style={({ pressed }) => [styles.extendBar, pressed && styles.extendBarPressed]}>
+        <View style={styles.extendHandle} />
+      </Pressable>
+    </View>
 
     {summary.total > 0 ? <InlineBanner title={insight.title} message={insight.message} tone={insightTone} style={styles.insight} /> : null}
 
     <View style={styles.sectionHeader}>
       <View style={styles.sectionCopy}>
-        <AppText variant="heading2">{isToday ? 'Today’s classes' : `${new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(activeDate)}’s classes`}</AppText>
+        <AppText variant="heading2">{isToday ? 'Today’s classes' : `${formatDayHeading(activeDate).split(',')[0]}’s classes`}</AppText>
         <AppText variant="bodySmall" color={colors.neutral.textMuted} style={styles.sectionSubtitle}>
           {classes.length ? `${classes.length} ${classes.length === 1 ? 'class' : 'classes'}${pendingCount ? ` · ${pendingCount} to mark` : ''}` : 'Your agenda for this date'}
         </AppText>
@@ -190,7 +248,6 @@ export default function TodayScreen() {
           <View style={styles.classRow}>
             <View style={styles.timeRail}>
               <AppText variant="label" style={styles.timeText}>{entry.start}</AppText>
-              <AppText variant="caption" color={colors.neutral.textMuted} style={styles.timeText}>{entry.end}</AppText>
               {index < timelineItems.length - 1 ? <View style={styles.railLine} /> : null}
             </View>
             {entry.type === 'recess' ? <RecessCard timeRange={`${entry.start}–${entry.end}`} isNow={isNow} style={styles.event} /> : <ScheduleEventCard
@@ -204,7 +261,7 @@ export default function TodayScreen() {
               isNow={isNow}
               style={styles.event}
               topAction={<IconButton icon="ellipsis-horizontal" label={`Options for ${entry.item.title}`} tone="ghost" onPress={() => setSelectedClass(entry.item)} />}
-              footer={entry.item.status !== 'cancelled' ? <AttendanceActions tone={subjectToneFor(entry.item.subjectId || entry.item.code, entry.item.color)} onAttended={() => updateStatus(entry.item, 'attended')} onAbsent={() => updateStatus(entry.item, 'absent')} /> : null}
+              footer={entry.item.status !== 'cancelled' ? <AttendanceActions tone={subjectToneFor(entry.item.subjectId || entry.item.code, entry.item.color)} status={entry.item.status} onAttended={() => updateStatus(entry.item, 'attended')} onAbsent={() => updateStatus(entry.item, 'absent')} /> : null}
             />}
           </View>
         </View>;
@@ -228,54 +285,140 @@ export default function TodayScreen() {
         </View>
       </> : null}
     </BottomSheet>
-
-    <CalendarSheet
-      visible={calendarOpen}
-      month={calendarMonth}
-      selectedDateKey={selectedDateKey}
-      todayKey={todayKey}
-      onMonthChange={setCalendarMonth}
-      onClose={() => setCalendarOpen(false)}
-      onSelect={(date) => { setActiveDate(date); setCalendarOpen(false); }}
-    />
   </Screen>;
 }
 
-function AttendanceActions({ tone, onAttended, onAbsent }: { tone: keyof typeof colors.subject; onAttended: () => void; onAbsent: () => void }) {
+function AttendanceActions({ tone, status, onAttended, onAbsent }: { tone: keyof typeof colors.subject; status?: AttendanceStatus; onAttended: () => void; onAbsent: () => void }) {
   const palette = colors.subject[tone];
+  const isAttended = status === 'attended';
+  const isAbsent = status === 'absent';
   return <View style={styles.attendanceActions}>
-    <Pressable accessibilityRole="button" accessibilityLabel="Mark attended" onPress={onAttended} style={({ pressed }) => [styles.attendanceButton, { borderColor: palette.accent }, pressed && styles.actionPressed]}>
-      <Ionicons name="checkmark" size={18} color={palette.accent} />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Mark attended"
+      onPress={onAttended}
+      style={({ pressed }) => [
+        styles.attendanceButton,
+        { borderColor: isAttended ? colors.semantic.success.solid : palette.accent },
+        isAttended && { backgroundColor: colors.semantic.success.solid },
+        pressed && styles.actionPressed,
+      ]}>
+      <Ionicons name="checkmark" size={18} color={isAttended ? colors.neutral.surface : palette.accent} />
     </Pressable>
-    <Pressable accessibilityRole="button" accessibilityLabel="Mark absent" onPress={onAbsent} style={({ pressed }) => [styles.attendanceButton, { borderColor: palette.accent }, pressed && styles.actionPressed]}>
-      <Ionicons name="close" size={18} color={palette.accent} />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Mark absent"
+      onPress={onAbsent}
+      style={({ pressed }) => [
+        styles.attendanceButton,
+        { borderColor: isAbsent ? colors.semantic.danger.solid : palette.accent },
+        isAbsent && { backgroundColor: colors.semantic.danger.solid },
+        pressed && styles.actionPressed,
+      ]}>
+      <Ionicons name="close" size={18} color={isAbsent ? colors.neutral.surface : palette.accent} />
     </Pressable>
   </View>;
 }
 
-function CalendarSheet({ visible, month, selectedDateKey, todayKey, onMonthChange, onClose, onSelect }: { visible: boolean; month: Date; selectedDateKey: string; todayKey: string; onMonthChange: (date: Date) => void; onClose: () => void; onSelect: (date: Date) => void }) {
+const markerColorMap = {
+  none: 'transparent',
+  success: colors.semantic.success.solid,
+  warning: colors.semantic.warning.solid,
+  danger: colors.semantic.danger.solid,
+  neutral: colors.neutral.textMuted,
+} as const;
+
+function InlineCalendarWidget({
+  month,
+  selectedDateKey,
+  todayKey,
+  markers = {},
+  allowWeekends = false,
+  onMonthChange,
+  onSelect,
+}: {
+  month: Date;
+  selectedDateKey: string;
+  todayKey: string;
+  markers?: Record<string, DayMarker>;
+  allowWeekends?: boolean;
+  onMonthChange: (date: Date) => void;
+  onSelect: (date: Date) => void;
+}) {
   const offset = (month.getDay() + 6) % 7;
-  const dates = Array.from({ length: offset + daysInMonth(month) }, (_, index) => index < offset ? null : index - offset + 1);
-  const weekdayLabels = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat(undefined, { weekday: 'narrow' }).format(addDays(mondayOfWeek(new Date()), index)));
-  return <BottomSheet visible={visible} title="Choose a date" onClose={onClose}>
-    <View style={styles.monthNavigation}>
-      <IconButton icon="chevron-back" label="Previous month" onPress={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} />
-      <AppText variant="title">{new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(month)}</AppText>
-      <IconButton icon="chevron-forward" label="Next month" onPress={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} />
+  const dates = Array.from({ length: offset + daysInMonth(month) }, (_, index) => (index < offset ? null : index - offset + 1));
+  const weekdayLabels = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+  return (
+    <View style={styles.calendarWidget}>
+      <View style={styles.monthNavigation}>
+        <IconButton icon="chevron-back" label="Previous month" tone="ghost" onPress={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1))} />
+        <AppText variant="title">{formatMonthYear(month)}</AppText>
+        <IconButton icon="chevron-forward" label="Next month" tone="ghost" onPress={() => onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1))} />
+      </View>
+      <View style={styles.calendarWeekdays}>
+        {weekdayLabels.map((label, index) => {
+          const isWeekendCol = index >= 5;
+          const disabledCol = isWeekendCol && !allowWeekends;
+          return (
+            <AppText
+              key={`${label}-${index}`}
+              variant="caption"
+              color={disabledCol ? colors.neutral.textDisabled : colors.neutral.textMuted}
+              style={[styles.calendarWeekday, disabledCol && styles.calendarDisabledText]}>
+              {label}
+            </AppText>
+          );
+        })}
+      </View>
+      <View style={styles.calendarGrid}>
+        {dates.map((day, index) => {
+          if (!day) return <View key={`empty-${index}`} style={styles.calendarCell} />;
+          const date = new Date(month.getFullYear(), month.getMonth(), day);
+          const key = dateKey(date);
+          const dayOfWeek = date.getDay();
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+          const isDisabled = isWeekend && !allowWeekends;
+          const selected = key === selectedDateKey;
+          const isToday = key === todayKey;
+          const marker = markers[key] ?? 'none';
+
+          return (
+            <Pressable
+              key={key}
+              accessibilityRole="button"
+              accessibilityLabel={formatDayHeading(date)}
+              accessibilityState={{ selected, disabled: isDisabled }}
+              disabled={isDisabled}
+              onPress={() => onSelect(date)}
+              style={({ pressed }) => [
+                styles.calendarCell,
+                selected && styles.calendarSelected,
+                isToday && !selected && styles.calendarToday,
+                isDisabled && styles.calendarCellDisabled,
+                pressed && !isDisabled && styles.actionPressed,
+              ]}>
+              <AppText
+                variant="label"
+                color={selected ? colors.brand.ink : isDisabled ? colors.neutral.textDisabled : colors.neutral.textPrimary}
+                style={[styles.timeText, isDisabled && styles.calendarDisabledText]}>
+                {day}
+              </AppText>
+              <View style={styles.indicatorRow}>
+                <View
+                  style={[
+                    styles.dot,
+                    isToday && !selected && styles.todayDot,
+                    marker !== 'none' && !isDisabled && { backgroundColor: markerColorMap[marker] },
+                  ]}
+                />
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
-    <View style={styles.calendarWeekdays}>{weekdayLabels.map((label, index) => <AppText key={`${label}-${index}`} variant="caption" color={colors.neutral.textMuted} style={styles.calendarWeekday}>{label}</AppText>)}</View>
-    <View style={styles.calendarGrid}>{dates.map((day, index) => {
-      if (!day) return <View key={`empty-${index}`} style={styles.calendarCell} />;
-      const date = new Date(month.getFullYear(), month.getMonth(), day);
-      const key = dateKey(date);
-      const selected = key === selectedDateKey;
-      const isToday = key === todayKey;
-      return <Pressable key={key} accessibilityRole="button" accessibilityLabel={formatDayHeading(date)} accessibilityState={{ selected }} onPress={() => onSelect(date)} style={[styles.calendarCell, selected && styles.calendarSelected, isToday && !selected && styles.calendarToday]}>
-        <AppText variant="label" color={selected ? colors.brand.ink : colors.neutral.textPrimary} style={styles.timeText}>{day}</AppText>
-      </Pressable>;
-    })}</View>
-    <Button label="Go to today" variant="secondary" onPress={() => onSelect(new Date())} leading={<Ionicons name="locate-outline" size={18} color={colors.brand.cobalt} />} style={styles.calendarButton} />
-  </BottomSheet>;
+  );
 }
 
 const styles = StyleSheet.create({
@@ -283,17 +426,62 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing[1], paddingBottom: 0 },
 
   stickyHeader: { flexShrink: 0 },
-  dateActions: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing[1], marginBottom: spacing[3] },
-  insight: { marginTop: spacing[5] },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing[2], marginBottom: spacing[3] },
+  headerTitle: { flex: 1, minHeight: 0 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], paddingTop: spacing[1] },
+  avatar: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', backgroundColor: colors.brand.cobaltSoft, alignItems: 'center', justifyContent: 'center' },
+  avatarPressed: { opacity: 0.78 },
+  pickerContainer: {
+    marginTop: spacing[1],
+    borderRadius: radius.feature,
+    borderCurve: 'continuous',
+    backgroundColor: colors.brand.skySoft,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2F0FA',
+  },
+  weekStrip: {
+    width: '100%',
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+  },
+  calendarWidget: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: spacing[2],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[1],
+  },
+  extendBar: {
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderTopWidth: 1,
+    borderTopColor: '#E2EEF8',
+  },
+  extendHandle: {
+    width: 36,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: colors.neutral.textDisabled,
+    opacity: 0.7,
+  },
+  extendBarPressed: { opacity: 0.6 },
+  calendarCellDisabled: { opacity: 0.28 },
+  calendarDisabledText: { textDecorationLine: 'none' },
+  indicatorRow: { height: 5, marginTop: 1, justifyContent: 'center', alignItems: 'center' },
+  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
+  todayDot: { width: 4.5, height: 4.5, borderRadius: 2.5, backgroundColor: colors.brand.cobalt },
+  insight: { marginTop: spacing[4] },
   sectionHeader: { marginTop: spacing[8], marginBottom: spacing[4], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[4] },
   sectionCopy: { flex: 1 },
   sectionSubtitle: { marginTop: spacing[1] },
   loading: { minHeight: 112, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
   timeline: { gap: spacing[2] },
   classRow: { flexDirection: 'row', alignItems: 'stretch' },
-  timeRail: { width: 54, alignItems: 'flex-start', paddingTop: spacing[4], position: 'relative' },
-  timeText: { fontVariant: ['tabular-nums'] },
-  railLine: { position: 'absolute', top: 58, bottom: -10, left: 4, width: 1, backgroundColor: colors.neutral.divider },
+  timeRail: { width: 50, alignItems: 'flex-start', paddingTop: spacing[4], position: 'relative' },
+  timeText: { fontVariant: ['tabular-nums'], fontSize: 13, lineHeight: 17, fontWeight: '700', color: colors.neutral.textSecondary },
+  railLine: { position: 'absolute', top: 38, bottom: -10, left: 4, width: 1, backgroundColor: colors.neutral.divider },
   classList: { flex: 1, minHeight: 0 },
   classListContent: { paddingTop: spacing[4], paddingBottom: size.tabBar + spacing[6] },
   event: { flex: 1, marginBottom: spacing[2] },
@@ -306,7 +494,7 @@ const styles = StyleSheet.create({
   calendarWeekdays: { flexDirection: 'row', marginBottom: spacing[2] },
   calendarWeekday: { width: '14.2857%', textAlign: 'center' },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  calendarCell: { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control },
+  calendarCell: { width: '14.2857%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, borderCurve: 'continuous' },
   calendarSelected: { backgroundColor: colors.brand.coral },
   calendarToday: { borderWidth: 2, borderColor: colors.brand.cobalt },
   calendarButton: { marginTop: spacing[5] },

@@ -121,11 +121,11 @@ function Info({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; la
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing[9] },
+  content: { paddingTop: spacing[1], paddingBottom: spacing[9] },
   loading: { minHeight: 220, alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
-  error: { marginTop: spacing[6] },
-  profileHero: { marginTop: spacing[5], alignItems: 'center', borderRadius: radius.feature, backgroundColor: colors.brand.sky, padding: spacing[7] },
-  avatar: { width: 82, height: 82, borderRadius: 27, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
+  error: { marginTop: spacing[4] },
+  profileHero: { marginTop: spacing[3], alignItems: 'center', borderRadius: radius.feature, borderCurve: 'continuous', backgroundColor: colors.brand.sky, padding: spacing[7] },
+  avatar: { width: 82, height: 82, borderRadius: 27, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
   avatarDot: { position: 'absolute', right: 2, top: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: colors.brand.coral, borderWidth: 3, borderColor: colors.neutral.surface },
   name: { marginTop: spacing[4], textAlign: 'center' },
   college: { marginTop: spacing[1], textAlign: 'center' },
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   sectionTitle: { marginTop: spacing[8], marginBottom: spacing[3] },
   details: { overflow: 'hidden' },
   info: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
-  infoIcon: { width: 40, height: 40, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand.cobaltSoft },
+  infoIcon: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand.cobaltSoft },
   infoCopy: { flex: 1 },
   infoValue: { marginTop: spacing[1] },
   divider: { height: 1, marginLeft: 68, marginRight: spacing[4], backgroundColor: colors.neutral.divider },

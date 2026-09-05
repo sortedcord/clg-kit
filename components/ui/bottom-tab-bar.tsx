@@ -47,10 +47,10 @@ export function BottomTabBar({ state, descriptors, navigation, insets }: BottomT
 }
 
 const styles = StyleSheet.create({
-  floatingArea: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing[5], paddingTop: spacing[3], backgroundColor: 'transparent' },
-  bar: { minHeight: size.touchTargetMin + spacing[3], flexDirection: 'row', alignItems: 'center', gap: spacing[1], padding: spacing[2], borderRadius: radius.sheet, borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface, ...shadow.floating },
-  tab: { minHeight: size.touchTargetMin, flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, borderRadius: radius.pill, paddingHorizontal: spacing[2] },
-  tabActive: { flexDirection: 'row', flexGrow: 1.28, gap: spacing[2], backgroundColor: colors.brand.cobalt, paddingHorizontal: spacing[4] },
-  label: { textAlign: 'center' },
+  floatingArea: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing[4], paddingTop: spacing[3], backgroundColor: 'transparent' },
+  bar: { minHeight: size.touchTargetMin + spacing[3], flexDirection: 'row', alignItems: 'center', gap: 2, padding: spacing[2], borderRadius: radius.sheet, borderCurve: 'continuous', borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface, ...shadow.floating },
+  tab: { minHeight: size.touchTargetMin, flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: radius.pill, borderCurve: 'continuous', paddingHorizontal: spacing[1] },
+  tabActive: { flexDirection: 'row', flexGrow: 1.15, gap: spacing[1] + 2, backgroundColor: colors.brand.cobalt, paddingHorizontal: spacing[3] },
+  label: { textAlign: 'center', flexShrink: 0 },
   pressed: { opacity: 0.76 },
 });

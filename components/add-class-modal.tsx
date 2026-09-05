@@ -13,7 +13,7 @@ import {
   radius,
   spacing,
 } from '@/components/ui';
-import { dateFromKey, formatDayHeading, timeToMinutes } from '@/lib/date';
+import { dateFromKey, formatDayHeading, formatWeekdayLong, timeToMinutes } from '@/lib/date';
 import { subjectToneFor } from '@/lib/design';
 import { collegeApi, type Subject } from '@/lib/api';
 
@@ -112,7 +112,7 @@ export function AddClassModal({ visible, onClose, onAdded, date, regular = false
 
   const title = regular ? 'Add recurring class' : 'Add a class';
   const context = regular
-    ? `Repeats on ${new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(dateFromKey(date))}. Recurring changes begin in the future.`
+    ? `Repeats on ${formatWeekdayLong(dateFromKey(date))}. Recurring changes begin in the future.`
     : `One-off class for ${formatDayHeading(dateFromKey(date))}.`;
 
   return <BottomSheet
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   loading: { minHeight: 180, alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
   sectionLabel: { marginTop: spacing[6], marginBottom: spacing[3] },
   subjects: { gap: spacing[2] },
-  subject: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: radius.card, borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface },
+  subject: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: radius.card, borderCurve: 'continuous', borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface },
   pressed: { opacity: 0.76 },
   subjectCopy: { flex: 1 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.neutral.border, alignItems: 'center', justifyContent: 'center' },

@@ -20,6 +20,7 @@ export function Screen({ children, scroll = true, edges = ['top'], style, conten
     <ScrollView
       testID={testID}
       style={styles.scroll}
+      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[styles.content, { paddingHorizontal: responsiveGutter }, contentContainerStyle, { paddingBottom: size.tabBar + spacing[6] }]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled">

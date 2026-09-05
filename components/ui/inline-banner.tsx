@@ -28,7 +28,7 @@ export function InlineBanner({ title, message, tone = 'neutral', action, style }
 }
 
 const styles = StyleSheet.create({
-  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], borderRadius: radius.card, padding: spacing[4] },
+  banner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[3], borderRadius: radius.card, borderCurve: 'continuous', padding: spacing[4] },
   copy: { flex: 1 },
   message: { marginTop: spacing[1] },
   action: { alignSelf: 'center' },

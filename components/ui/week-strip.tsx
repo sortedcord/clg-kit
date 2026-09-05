@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppText } from './app-text';
 import { colors, radius, spacing } from './tokens';
+import { formatDayHeading, formatWeekdayShort } from '@/lib/date';
 
 export type WeekDay = { date: Date; disabled?: boolean; marker?: 'none' | 'success' | 'warning' | 'danger' | 'neutral' };
 type Props = {
@@ -23,8 +24,8 @@ export function WeekStrip({ days, selectedDateKey, onSelect, todayDateKey, style
       const key = dateKey(date);
       const selected = key === selectedDateKey;
       const today = key === todayDateKey;
-      const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' }).format(date);
-      const fullDate = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
+      const weekday = formatWeekdayShort(date).slice(0, 3).toLowerCase();
+      const fullDate = formatDayHeading(date);
       return <Pressable
         key={key}
         accessibilityRole="button"
@@ -33,7 +34,7 @@ export function WeekStrip({ days, selectedDateKey, onSelect, todayDateKey, style
         disabled={disabled}
         onPress={() => { if (Platform.OS !== 'web') void Haptics.selectionAsync(); onSelect(date); }}
         style={({ pressed }) => [styles.day, selected && styles.selected, disabled && styles.disabled, pressed && !disabled && styles.pressed]}>
-        <AppText variant="caption" color={selected ? colors.brand.ink : colors.neutral.textSecondary}>{weekday}</AppText>
+        <AppText variant="caption" color={selected ? colors.brand.ink : colors.neutral.textMuted} style={styles.weekday}>{weekday}</AppText>
         <AppText variant="title" color={selected ? colors.brand.ink : colors.neutral.textPrimary} style={styles.number}>{date.getDate()}</AppText>
         <View style={styles.indicatorRow}>
           <View style={[styles.dot, today && !selected && styles.todayDot, marker !== 'none' && { backgroundColor: markerColor[marker] }]} />
@@ -44,13 +45,14 @@ export function WeekStrip({ days, selectedDateKey, onSelect, todayDateKey, style
 }
 
 const styles = StyleSheet.create({
-  strip: { flexDirection: 'row', gap: spacing[1], padding: spacing[2], borderRadius: radius.feature, backgroundColor: colors.brand.sky },
-  day: { flex: 1, minHeight: 60, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, paddingVertical: spacing[1] },
+  strip: { flexDirection: 'row', gap: spacing[1], padding: spacing[2], borderRadius: radius.feature, borderCurve: 'continuous', backgroundColor: colors.brand.skySoft },
+  day: { flex: 1, minHeight: 64, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, borderCurve: 'continuous', paddingVertical: spacing[2] },
   selected: { backgroundColor: colors.brand.coral },
   disabled: { opacity: 0.42 },
   pressed: { opacity: 0.78 },
-  number: { marginTop: 1, fontVariant: ['tabular-nums'] },
-  indicatorRow: { height: 5, marginTop: 2, justifyContent: 'center' },
+  weekday: { fontSize: 11, lineHeight: 14, fontWeight: '600' },
+  number: { fontSize: 18, lineHeight: 22, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
+  indicatorRow: { height: 6, marginTop: 3, justifyContent: 'center' },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'transparent' },
-  todayDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.brand.cobalt },
+  todayDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.brand.cobalt },
 });

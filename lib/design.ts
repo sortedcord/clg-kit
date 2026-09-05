@@ -16,6 +16,15 @@ export function subjectToneFor(identity: string | number, savedColor?: string): 
   return matched ?? subjectTones[hash(identity) % subjectTones.length];
 }
 
+export function subjectShortLabel(name: string, code: string, shortName?: string): string {
+  if (shortName && shortName.trim()) return shortName.trim().slice(0, 5);
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return parts.map((w) => w[0]).join('').toUpperCase().slice(0, 4);
+  }
+  return code.trim().slice(0, 4);
+}
+
 export function attendanceTone(percentage: number, total: number, threshold = 75): SemanticTone {
   if (!total) return 'neutral';
   if (percentage >= threshold) return 'success';

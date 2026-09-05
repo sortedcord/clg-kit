@@ -19,5 +19,5 @@ export function Card({ children, tone = 'surface', padding = spacing[5], style, 
 }
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radius.card },
+  base: { borderRadius: radius.card, borderCurve: 'continuous' },
 });

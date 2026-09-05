@@ -142,7 +142,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   content: { paddingTop: spacing[5], paddingBottom: spacing[9] },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  logo: { width: 40, height: 40, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand.cobalt },
+  logo: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand.cobalt },
   progress: { flexDirection: 'row', gap: spacing[2], marginTop: spacing[8] },
   progressSegment: { flex: 1, height: 5, borderRadius: radius.pill, backgroundColor: colors.neutral.divider },
   progressActive: { backgroundColor: colors.brand.cobalt },

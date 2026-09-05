@@ -95,7 +95,10 @@ function ensureSessions(date) {
   const create = db.prepare('INSERT OR IGNORE INTO class_sessions (user_id, subject_id, timetable_class_id, class_date, start_time, end_time, room) VALUES (?, ?, ?, ?, ?, ?, ?)');
   for (const item of templates) create.run(STUDENT_ID, item.subject_id, item.id, date, item.start_time, item.end_time, item.room);
 }
-function getSubject(id) { return db.prepare('SELECT id FROM subjects WHERE id = ? AND user_id = ?').get(id, STUDENT_ID); }
+function getSubject(id) {
+  if (id === undefined || id === null || Number.isNaN(Number(id))) return null;
+  return db.prepare('SELECT id FROM subjects WHERE id = ? AND user_id = ?').get(Number(id), STUDENT_ID);
+}
 
 migrate();
 const server = createServer(async (req, res) => {
@@ -130,6 +133,8 @@ const server = createServer(async (req, res) => {
       const body = await readBody(req);
       const { subjectId, date, startTime, endTime, room } = body;
       if (!getSubject(subjectId) || !dateIsValid(date) || !/^\d\d:\d\d$/.test(startTime) || !/^\d\d:\d\d$/.test(endTime) || !room?.trim()) return error(res, 400, 'subjectId, date, startTime, endTime and room are required');
+      const existing = db.prepare('SELECT id FROM class_sessions WHERE user_id = ? AND subject_id = ? AND class_date = ? AND start_time = ? AND is_removed = 0').get(STUDENT_ID, subjectId, date, startTime);
+      if (existing) return json(res, 200, { id: existing.id });
       const record = db.prepare('INSERT INTO class_sessions (user_id, subject_id, class_date, start_time, end_time, room, is_override) VALUES (?, ?, ?, ?, ?, ?, 1)').run(STUDENT_ID, subjectId, date, startTime, endTime, room.trim());
       return json(res, 201, db.prepare('SELECT id FROM class_sessions WHERE id = ?').get(record.lastInsertRowid));
     }
@@ -194,6 +199,15 @@ const server = createServer(async (req, res) => {
       return json(res, 201, { id: Number(result.lastInsertRowid), effectiveFrom });
     }
     const timetableMatch = path.match(/^\/api\/v1\/timetable\/classes\/(\d+)$/);
+    if (req.method === 'DELETE' && timetableMatch) {
+      const id = Number(timetableMatch[1]);
+      const existing = db.prepare('SELECT * FROM timetable_classes WHERE id = ? AND user_id = ? AND active = 1').get(id, STUDENT_ID);
+      if (!existing) return error(res, 404, 'Timetable class not found');
+      const earliestFutureDate = nextDateKey(localDateKey());
+      db.prepare('UPDATE timetable_classes SET active = 0, effective_to = ? WHERE id = ?').run(previousDateKey(earliestFutureDate), id);
+      db.prepare('DELETE FROM class_sessions WHERE timetable_class_id = ? AND class_date >= ? AND is_override = 0').run(id, earliestFutureDate);
+      return json(res, 200, { id, deleted: true });
+    }
     if (req.method === 'PATCH' && timetableMatch) {
       const body = await readBody(req); const id = Number(timetableMatch[1]);
       const existing = db.prepare('SELECT * FROM timetable_classes WHERE id = ? AND user_id = ? AND active = 1').get(id, STUDENT_ID);
@@ -222,7 +236,7 @@ const server = createServer(async (req, res) => {
       const sessions = db.prepare(`SELECT cs.id, cs.class_date AS date, cs.start_time AS time, cs.end_time AS endTime, cs.room,
         COALESCE(a.status, 'pending') AS status FROM class_sessions cs LEFT JOIN attendance a ON a.session_id = cs.id
         WHERE cs.subject_id = ? AND cs.user_id = ? ORDER BY cs.class_date DESC, cs.start_time DESC`).all(id, STUDENT_ID);
-      const eligible = sessions.filter((session) => session.status !== 'cancelled');
+      const eligible = sessions.filter((session) => session.status === 'attended' || session.status === 'absent');
       const attended = eligible.filter((session) => session.status === 'attended').length;
       return json(res, 200, { ...subject, summary: { total: eligible.length, attended, absent: eligible.filter((session) => session.status === 'absent').length, percentage: eligible.length ? Math.round(attended / eligible.length * 100) : 0 }, sessions });
     }
@@ -235,14 +249,77 @@ const server = createServer(async (req, res) => {
         return json(res, 200, { id });
       } catch { return error(res, 409, 'A subject with that code already exists'); }
     }
+    if (req.method === 'DELETE' && subjectMatch) {
+      const id = Number(subjectMatch[1]);
+      const existing = getSubject(id);
+      if (!existing) return error(res, 404, 'Subject not found');
+      // Cascade delete subject's attendance, sessions, and timetable classes
+      const sessions = db.prepare('SELECT id FROM class_sessions WHERE subject_id = ? AND user_id = ?').all(id, STUDENT_ID);
+      for (const sess of sessions) {
+        db.prepare('DELETE FROM attendance WHERE session_id = ?').run(sess.id);
+      }
+      db.prepare('DELETE FROM class_sessions WHERE subject_id = ? AND user_id = ?').run(id, STUDENT_ID);
+      db.prepare('DELETE FROM timetable_classes WHERE subject_id = ? AND user_id = ?').run(id, STUDENT_ID);
+      db.prepare('DELETE FROM subjects WHERE id = ? AND user_id = ?').run(id, STUDENT_ID);
+      return json(res, 200, { id, deleted: true });
+    }
     if (req.method === 'GET' && path === '/api/v1/attendance/summary') {
-      const rows = db.prepare(`SELECT s.id, s.name, s.code, s.color,
-        COUNT(cs.id) AS total, SUM(CASE WHEN a.status = 'attended' THEN 1 ELSE 0 END) AS attended,
+      const rows = db.prepare(`SELECT s.id, s.name, s.code, s.short_name AS shortName, s.color,
+        SUM(CASE WHEN cs.id IS NOT NULL AND a.status IN ('attended', 'absent') THEN 1 ELSE 0 END) AS total,
+        SUM(CASE WHEN a.status = 'attended' THEN 1 ELSE 0 END) AS attended,
         SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) AS absent,
         SUM(CASE WHEN a.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
-        FROM subjects s LEFT JOIN class_sessions cs ON cs.subject_id = s.id LEFT JOIN attendance a ON a.session_id = cs.id
+        FROM subjects s
+        LEFT JOIN class_sessions cs ON cs.subject_id = s.id AND cs.is_removed = 0
+        LEFT JOIN attendance a ON a.session_id = cs.id
         WHERE s.user_id = ? GROUP BY s.id ORDER BY s.name`).all(STUDENT_ID);
-      return json(res, 200, { subjects: rows.map(r => ({ ...r, total: Number(r.total) - Number(r.cancelled), percentage: Number(r.total) - Number(r.cancelled) ? Math.round(Number(r.attended) / (Number(r.total) - Number(r.cancelled)) * 100) : 0 })) });
+      return json(res, 200, {
+        subjects: rows.map(r => {
+          const tot = Number(r.total);
+          const att = Number(r.attended);
+          return {
+            id: r.id,
+            name: r.name,
+            code: r.code,
+            shortName: r.shortName,
+            color: r.color,
+            total: tot,
+            attended: att,
+            absent: Number(r.absent),
+            cancelled: Number(r.cancelled),
+            percentage: tot > 0 ? Math.round((att / tot) * 100) : 0,
+          };
+        }),
+      });
+    }
+    if (req.method === 'GET' && path === '/api/v1/attendance/markers') {
+      const month = url.searchParams.get('month'); // Expect YYYY-MM
+      if (!month || !/^\d{4}-\d{2}$/.test(month)) return error(res, 400, 'month must be YYYY-MM');
+      const start = `${month}-01`;
+      const [yearStr, monthStr] = month.split('-');
+      const days = new Date(Number(yearStr), Number(monthStr), 0).getDate();
+      const end = `${month}-${String(days).padStart(2, '0')}`;
+      const sessions = db.prepare(`SELECT cs.class_date AS date, COALESCE(a.status, 'pending') AS status
+        FROM class_sessions cs
+        LEFT JOIN attendance a ON a.session_id = cs.id
+        WHERE cs.user_id = ? AND cs.class_date >= ? AND cs.class_date <= ? AND cs.is_removed = 0`).all(STUDENT_ID, start, end);
+      const byDate = {};
+      for (const row of sessions) {
+        if (!byDate[row.date]) byDate[row.date] = [];
+        byDate[row.date].push(row.status);
+      }
+      const today = localDateKey();
+      const markers = {};
+      for (const [date, statuses] of Object.entries(byDate)) {
+        if (date > today) continue;
+        const held = statuses.filter((s) => s !== 'cancelled');
+        if (!held.length) continue;
+        if (held.every((s) => s === 'attended')) markers[date] = 'success';
+        else if (held.some((s) => s === 'absent')) markers[date] = 'danger';
+        else if (held.some((s) => s === 'pending')) markers[date] = 'warning';
+        else markers[date] = 'neutral';
+      }
+      return json(res, 200, { markers });
     }
     return error(res, 404, 'Route not found');
   } catch (err) { console.error(err); return error(res, 400, err.message || 'Bad request'); }

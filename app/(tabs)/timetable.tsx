@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import { AddClassModal } from '@/components/add-class-modal';
 import {
   AppHeader,
   AppText,
+  BottomSheet,
   Button,
   Card,
   EmptyState,
@@ -20,7 +21,15 @@ import {
   spacing,
   type WeekDay,
 } from '@/components/ui';
-import { addDays, dateKey, formatDayHeading, mondayOfWeek } from '@/lib/date';
+import {
+  addDays,
+  dateKey,
+  formatDayHeading,
+  formatMonthShortDay,
+  formatWeekdayLong,
+  formatYear,
+  mondayOfWeek,
+} from '@/lib/date';
 import { subjectToneFor } from '@/lib/design';
 import { collegeApi } from '@/lib/api';
 
@@ -38,6 +47,7 @@ export default function TimetableScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [addClassOpen, setAddClassOpen] = useState(false);
+  const [selectedTimetableClass, setSelectedTimetableClass] = useState<TimetableClass | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   const selectedDateKey = dateKey(activeDate);
@@ -69,7 +79,7 @@ export default function TimetableScreen() {
   useEffect(() => { load(); }, [load, refresh]);
 
   const moveWeek = (amount: number) => setActiveDate(addDays(activeDate, amount * 7));
-  const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(activeDate);
+  const weekday = formatWeekdayLong(activeDate);
   const showRecess = recess.enabled && recess.start < recess.end;
   const timelineItems = [
     ...schedule.map((item) => ({ type: 'class' as const, start: item.startTime, end: item.endTime, item })),
@@ -77,20 +87,20 @@ export default function TimetableScreen() {
   ].sort((left, right) => left.start.localeCompare(right.start) || (left.type === 'recess' ? -1 : 1));
 
   return <Screen contentContainerStyle={styles.content}>
-    <AppHeader title="Timetable" />
+    <AppHeader title="Timetable" style={styles.header} />
 
     <View style={styles.weekToolbar}>
       <IconButton icon="chevron-back" label="Previous week" tone="ghost" onPress={() => moveWeek(-1)} />
       <View style={styles.weekCopy}>
-        <AppText variant="label">Week of {new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(weekStart)}</AppText>
-        <AppText variant="caption" color={colors.neutral.textMuted}>{new Intl.DateTimeFormat(undefined, { year: 'numeric' }).format(activeDate)}</AppText>
+        <AppText variant="label">Week of {formatMonthShortDay(weekStart)}</AppText>
+        <AppText variant="caption" color={colors.neutral.textMuted}>{formatYear(activeDate)}</AppText>
       </View>
       <View style={styles.toolbarActions}>
         {todayKey !== selectedDateKey ? <Button label="This week" variant="ghost" size="compact" fullWidth={false} onPress={() => setActiveDate(new Date())} /> : null}
         <IconButton icon="chevron-forward" label="Next week" tone="ghost" onPress={() => moveWeek(1)} />
       </View>
     </View>
-    <WeekStrip days={weekDays} selectedDateKey={selectedDateKey} todayDateKey={todayKey} onSelect={setActiveDate} />
+    <WeekStrip days={weekDays} selectedDateKey={selectedDateKey} todayDateKey={todayKey} onSelect={setActiveDate} style={styles.weekStrip} />
 
     <View style={styles.sectionHeader}>
       <View style={styles.sectionCopy}>
@@ -119,6 +129,7 @@ export default function TimetableScreen() {
           room={entry.item.room}
           subjectTone={subjectToneFor(entry.item.subjectId, entry.item.color)}
           style={styles.event}
+          topAction={<IconButton icon="ellipsis-horizontal" label={`Options for ${entry.item.subjectName}`} tone="ghost" onPress={() => setSelectedTimetableClass(entry.item)} />}
           onPress={() => router.push(`/subjects/${entry.item.subjectId}` as never)}
         />}
       </View>)}
@@ -139,14 +150,69 @@ export default function TimetableScreen() {
       onClose={() => setAddClassOpen(false)}
       onAdded={() => setRefresh((value) => value + 1)}
     />
+
+    <BottomSheet
+      visible={Boolean(selectedTimetableClass)}
+      title="Recurring class options"
+      onClose={() => setSelectedTimetableClass(null)}>
+      {selectedTimetableClass ? <>
+        <Card tone="skySoft" style={styles.selectedClassSummary}>
+          <AppText variant="title">{selectedTimetableClass.subjectName}</AppText>
+          <AppText variant="bodySmall" color={colors.neutral.textSecondary} style={styles.sectionSub}>
+            {selectedTimetableClass.code} · {selectedTimetableClass.startTime}–{selectedTimetableClass.endTime} · {selectedTimetableClass.room}
+          </AppText>
+        </Card>
+        <View style={styles.sheetButtons}>
+          <Button
+            label="View subject"
+            variant="secondary"
+            onPress={() => {
+              const id = selectedTimetableClass.subjectId;
+              setSelectedTimetableClass(null);
+              router.push(`/subjects/${id}` as never);
+            }}
+            leading={<Ionicons name="book-outline" size={18} color={colors.brand.cobalt} />}
+          />
+          <Button
+            label="Delete recurring class"
+            variant="ghost"
+            onPress={() => {
+              Alert.alert(
+                'Delete recurring class?',
+                'This will stop this class from repeating in future weeks. Past class records will be preserved.',
+                [
+                  { text: 'Keep', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await collegeApi.deleteTimetableClass(selectedTimetableClass.id);
+                        setSelectedTimetableClass(null);
+                        setRefresh((v) => v + 1);
+                      } catch (err) {
+                        Alert.alert('Couldn’t delete class', err instanceof Error ? err.message : 'Please try again.');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+            leading={<Ionicons name="trash-outline" size={18} color={colors.semantic.danger.text} />}
+          />
+        </View>
+      </> : null}
+    </BottomSheet>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing[1], paddingBottom: spacing[9] },
-  weekToolbar: { marginTop: spacing[6], marginBottom: spacing[3], flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  header: { paddingTop: spacing[2], minHeight: 0 },
+  weekToolbar: { marginTop: spacing[3], marginBottom: spacing[3], flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   weekCopy: { flex: 1, alignItems: 'center' },
   toolbarActions: { flexDirection: 'row', alignItems: 'center' },
+  weekStrip: { marginTop: spacing[1] },
   sectionHeader: { marginTop: spacing[8], marginBottom: spacing[4], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[4] },
   sectionCopy: { flex: 1 },
   sectionSub: { marginTop: spacing[1] },
@@ -158,4 +224,6 @@ const styles = StyleSheet.create({
   railLine: { position: 'absolute', top: 58, bottom: -10, left: 4, width: 1, backgroundColor: colors.neutral.divider },
   event: { flex: 1, marginBottom: spacing[2] },
   note: { marginTop: spacing[6] },
+  selectedClassSummary: { marginTop: spacing[2] },
+  sheetButtons: { gap: spacing[2], marginTop: spacing[5] },
 });

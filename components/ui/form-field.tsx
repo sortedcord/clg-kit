@@ -35,7 +35,7 @@ export function FormField({ label, hint, error, containerStyle, editable = true,
 
 const styles = StyleSheet.create({
   label: { marginBottom: spacing[2] },
-  inputWrap: { minHeight: size.control, flexDirection: 'row', alignItems: 'center', borderRadius: radius.control, borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface, paddingHorizontal: spacing[4] },
+  inputWrap: { minHeight: size.control, flexDirection: 'row', alignItems: 'center', borderRadius: radius.control, borderCurve: 'continuous', borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface, paddingHorizontal: spacing[4] },
   inputFocused: { borderColor: colors.brand.cobalt, borderWidth: 2, paddingHorizontal: spacing[3] + 1 },
   inputError: { borderColor: colors.semantic.danger.solid, borderWidth: 2, paddingHorizontal: spacing[3] + 1 },
   inputDisabled: { backgroundColor: colors.neutral.surfaceSubtle },

@@ -27,8 +27,8 @@ export function RecessCard({ timeRange, isNow = false, style }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { minHeight: 96, flexDirection: 'row', alignItems: 'center', gap: spacing[4], borderRadius: radius.feature, padding: spacing[5], backgroundColor: colors.neutral.surfaceSubtle, borderWidth: 1, borderColor: colors.neutral.divider },
-  icon: { width: 40, height: 40, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
+  card: { minHeight: 96, flexDirection: 'row', alignItems: 'center', gap: spacing[4], borderRadius: radius.feature, borderCurve: 'continuous', padding: spacing[5], backgroundColor: colors.neutral.surfaceSubtle, borderWidth: 1, borderColor: colors.neutral.divider },
+  icon: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
   copy: { flex: 1 },
   heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[3] },
   now: { borderRadius: radius.pill, backgroundColor: colors.brand.coral, paddingHorizontal: spacing[3], paddingVertical: 3 },

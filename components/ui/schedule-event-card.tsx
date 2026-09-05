@@ -26,6 +26,7 @@ export function ScheduleEventCard({ title, timeRange, subjectTone, room, kind, c
   const subject = colors.subject[subjectTone];
   const cancelled = state === 'cancelled';
   const absent = state === 'absent';
+  const attended = state === 'attended';
   const backgroundColor = cancelled ? colors.neutral.surfaceSubtle : absent ? colors.semantic.danger.soft : subject.surface;
   const foreground = cancelled ? colors.neutral.textMuted : absent ? colors.semantic.danger.text : subject.accent;
   const content = <>
@@ -42,7 +43,23 @@ export function ScheduleEventCard({ title, timeRange, subjectTone, room, kind, c
         <Ionicons name="school-outline" size={14} color={foreground} />
         <AppText variant="label" color={foreground}>{classType}</AppText>
       </View>
-      {isNow ? <View style={styles.now}><AppText variant="caption" color={colors.brand.ink}>Now</AppText></View> : cancelled ? <AppText variant="label" color={colors.neutral.textMuted}>Cancelled</AppText> : <ParticipantStack accent={foreground} />}
+      {isNow ? (
+        <View style={styles.now}><AppText variant="caption" color={colors.brand.ink}>Now</AppText></View>
+      ) : cancelled ? (
+        <AppText variant="label" color={colors.neutral.textMuted}>Cancelled</AppText>
+      ) : attended ? (
+        <View style={styles.statusConfirmed}>
+          <Ionicons name="checkmark-circle" size={15} color={colors.semantic.success.solid} />
+          <AppText variant="label" color={colors.semantic.success.text}>Attended</AppText>
+        </View>
+      ) : absent ? (
+        <View style={styles.statusConfirmed}>
+          <Ionicons name="close-circle" size={15} color={colors.semantic.danger.solid} />
+          <AppText variant="label" color={colors.semantic.danger.text}>Absent</AppText>
+        </View>
+      ) : (
+        <ParticipantStack accent={foreground} />
+      )}
     </View>
     {footer ? <View style={styles.footer}>{footer}</View> : null}
   </>;
@@ -62,7 +79,7 @@ function ParticipantStack({ accent }: { accent: string }) {
 }
 
 const styles = StyleSheet.create({
-  card: { minHeight: 116, overflow: 'hidden', borderRadius: radius.feature, padding: spacing[5] },
+  card: { minHeight: 116, overflow: 'hidden', borderRadius: radius.feature, borderCurve: 'continuous', padding: spacing[5] },
   titleRow: { minHeight: 40, flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
   title: { flex: 1, paddingTop: spacing[1] },
   topAction: { marginRight: -spacing[3], marginTop: -spacing[3] },
@@ -72,6 +89,7 @@ const styles = StyleSheet.create({
   bottomRow: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[3], marginTop: spacing[3] },
   typeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   now: { borderRadius: radius.pill, backgroundColor: colors.brand.coral, paddingHorizontal: spacing[3], paddingVertical: 3 },
+  statusConfirmed: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   participants: { flexDirection: 'row', alignItems: 'center' },
   avatar: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, borderWidth: 2, borderColor: colors.neutral.surface },
   more: { marginLeft: spacing[2] },

@@ -29,7 +29,7 @@ export function IconButton({ icon, label, onPress, tone = 'soft', disabled = fal
 }
 
 const styles = StyleSheet.create({
-  base: { width: size.touchTargetMin, height: size.touchTargetMin, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' },
+  base: { width: size.touchTargetMin, height: size.touchTargetMin, borderRadius: radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.48 },
   pressed: { transform: [{ scale: motion.pressedScale }] },
 });

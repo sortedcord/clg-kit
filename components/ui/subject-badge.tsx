@@ -13,7 +13,7 @@ export function SubjectBadge({ shortName, tone, size = 'medium', style }: Props)
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center', borderRadius: radius.control },
+  base: { alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, borderCurve: 'continuous' },
   small: { minWidth: 32, height: 32, paddingHorizontal: 6 },
-  medium: { minWidth: 44, height: 44, paddingHorizontal: 8, borderRadius: 14 },
+  medium: { minWidth: 44, height: 44, paddingHorizontal: 8, borderRadius: 14, borderCurve: 'continuous' },
 });

@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.neutral.scrim },
   backdrop: { ...StyleSheet.absoluteFillObject },
   keyboard: { width: '100%', maxHeight: '92%' },
-  sheet: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, backgroundColor: colors.neutral.surface, paddingHorizontal: spacing[6], paddingTop: spacing[3], ...shadow.floating },
+  sheet: { borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, borderCurve: 'continuous', backgroundColor: colors.neutral.surface, paddingHorizontal: spacing[6], paddingTop: spacing[3], ...shadow.floating },
   handle: { width: 36, height: 4, alignSelf: 'center', borderRadius: radius.pill, backgroundColor: colors.neutral.border },
   header: { minHeight: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing[4] },
   body: { paddingBottom: spacing[5] },

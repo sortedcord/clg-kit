@@ -50,8 +50,8 @@ export function Button({ label, onPress, variant = 'primary', size: buttonSize =
 }
 
 const styles = StyleSheet.create({
-  base: { minHeight: size.control, paddingHorizontal: spacing[5], borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2] },
-  compact: { minHeight: 40, paddingHorizontal: spacing[4], borderRadius: 12 },
+  base: { minHeight: size.control, paddingHorizontal: spacing[5], borderRadius: 14, borderCurve: 'continuous', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2] },
+  compact: { minHeight: 40, paddingHorizontal: spacing[4], borderRadius: 12, borderCurve: 'continuous' },
   fullWidth: { alignSelf: 'stretch' },
   pressed: { transform: [{ scale: motion.pressedScale }] },
   disabled: { backgroundColor: colors.neutral.surfaceSubtle, borderColor: colors.neutral.surfaceSubtle },

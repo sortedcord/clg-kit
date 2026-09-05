@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
 import {
   AppHeader,
@@ -94,6 +94,28 @@ export default function SubjectDetailsScreen() {
     }
   };
 
+  const deleteSubject = () => {
+    Alert.alert(
+      'Delete subject?',
+      `Are you sure you want to delete ${data?.name}? This will remove its timetable classes and attendance records.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await collegeApi.deleteSubject(subjectId);
+              router.back();
+            } catch (err) {
+              Alert.alert('Couldn’t delete subject', err instanceof Error ? err.message : 'Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading && !data) return <Screen scroll={false} contentContainerStyle={styles.center}><ActivityIndicator color={colors.brand.cobalt} /><AppText variant="bodySmall" color={colors.neutral.textSecondary} style={styles.loadingText}>Loading subject…</AppText></Screen>;
   if (!data) return <Screen contentContainerStyle={styles.content}>
     <AppHeader compact title="Subject details" leading={<IconButton icon="chevron-back" label="Go back" onPress={() => router.back()} />} />
@@ -141,6 +163,7 @@ export default function SubjectDetailsScreen() {
         <FormField label="Default room or location" value={defaultRoom} onChangeText={setDefaultRoom} placeholder="e.g. B-204 or Lab 3" hint="Used automatically when you add a class." autoCapitalize="words" />
       </View>
       <Button label="Save changes" loading={saving} haptic="success" onPress={save} />
+      <Button label="Delete subject" variant="ghost" onPress={deleteSubject} leading={<Ionicons name="trash-outline" size={18} color={colors.semantic.danger.text} />} style={styles.deleteButton} />
     </Card> : <>
       <InlineBanner title={summaryCopy.title} message={summaryCopy.message} tone={summaryTone} style={styles.insight} />
       <Card padding={0} style={styles.stats}>
@@ -182,13 +205,13 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing[9] },
+  content: { paddingTop: spacing[1], paddingBottom: spacing[9] },
   center: { alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: spacing[3] },
-  error: { marginTop: spacing[6] },
-  hero: { marginTop: spacing[5], borderRadius: radius.feature, padding: spacing[6] },
+  error: { marginTop: spacing[4] },
+  hero: { marginTop: spacing[3], borderRadius: radius.feature, borderCurve: 'continuous', padding: spacing[6] },
   heroIdentity: { flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
-  badge: { width: 52, height: 52, borderRadius: 17 },
+  badge: { width: 52, height: 52, borderRadius: 17, borderCurve: 'continuous' },
   heroCopy: { flex: 1 },
   heroMeta: { marginTop: spacing[1] },
   heroProgress: { marginTop: spacing[6], flexDirection: 'row', alignItems: 'flex-end', gap: spacing[5] },
@@ -197,6 +220,7 @@ const styles = StyleSheet.create({
   editCard: { marginTop: spacing[4] },
   formError: { marginTop: spacing[4] },
   fields: { gap: spacing[4], marginVertical: spacing[5] },
+  deleteButton: { marginTop: spacing[3] },
   insight: { marginTop: spacing[4] },
   stats: { minHeight: 92, marginTop: spacing[3], flexDirection: 'row', alignItems: 'center' },
   stat: { flex: 1, alignItems: 'center', paddingVertical: spacing[5] },

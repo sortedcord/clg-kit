@@ -47,3 +47,9 @@ app-example
 
 # Local College Kit API database
 backend/data/
+
+# Playwright & test artifacts
+dist-web/
+screenshots/
+test-results/
+playwright-report/

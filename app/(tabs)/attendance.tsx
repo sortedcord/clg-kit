@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import {
   AppHeader,
@@ -11,6 +11,7 @@ import {
   Button,
   Card,
   EmptyState,
+  IconButton,
   InlineBanner,
   ProgressBar,
   Screen,
@@ -19,7 +20,7 @@ import {
   colors,
   spacing,
 } from '@/components/ui';
-import { attendanceMessage, attendanceTone, subjectToneFor } from '@/lib/design';
+import { attendanceMessage, attendanceTone, subjectShortLabel, subjectToneFor } from '@/lib/design';
 import { collegeApi } from '@/lib/api';
 
 type Subject = Awaited<ReturnType<typeof collegeApi.attendanceSummary>>['subjects'][number];
@@ -54,7 +55,21 @@ export default function AttendanceScreen() {
   });
 
   return <Screen contentContainerStyle={styles.content}>
-    <AppHeader title="Attendance" />
+    <AppHeader
+      title="Attendance"
+      style={styles.header}
+      trailing={
+        <IconButton
+          icon="information-circle-outline"
+          label="Attendance calculation rules"
+          tone="ghost"
+          onPress={() => Alert.alert(
+            'Attendance rules',
+            '• Overall attendance is calculated from classes that were marked attended vs. total classes held.\n\n• Cancelled classes are automatically excluded from calculations.\n\n• Target threshold is 75%.'
+          )}
+        />
+      }
+    />
 
     {loadError ? <InlineBanner title="Couldn’t load attendance" message={loadError} tone="danger" action={<Button label="Retry" size="compact" variant="ghost" fullWidth={false} onPress={load} />} style={styles.firstBlock} /> : null}
     {loading ? <Card tone="skySoft" style={[styles.loading, styles.firstBlock]}><ActivityIndicator color={colors.brand.cobalt} /><AppText variant="bodySmall" color={colors.neutral.textSecondary}>Calculating attendance…</AppText></Card> : null}
@@ -106,7 +121,7 @@ export default function AttendanceScreen() {
             accessibilityLabel={`${subject.name}, ${subject.percentage} percent attendance, ${subject.attended} of ${subject.total} classes attended`}
             onPress={() => router.push(`/subjects/${subject.id}` as never)}
             style={({ pressed }) => [styles.subject, pressed && styles.subjectPressed]}>
-            <SubjectBadge shortName={subject.shortName || subject.code.slice(0, 3)} tone={tone} />
+            <SubjectBadge shortName={subjectShortLabel(subject.name, subject.code, subject.shortName)} tone={tone} />
             <View style={styles.subjectBody}>
               <View style={styles.subjectTop}>
                 <View style={styles.subjectTitleWrap}>
@@ -136,9 +151,10 @@ function Stat({ value, label }: { value: number; label: string }) {
 
 const styles = StyleSheet.create({
   content: { paddingTop: spacing[1], paddingBottom: spacing[9] },
-  firstBlock: { marginTop: spacing[6] },
+  header: { paddingTop: spacing[2], minHeight: 0 },
+  firstBlock: { marginTop: spacing[4] },
   loading: { minHeight: 144, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
-  hero: { marginTop: spacing[6], flexDirection: 'row', alignItems: 'center', gap: spacing[6], borderRadius: 20 },
+  hero: { marginTop: spacing[3], flexDirection: 'row', alignItems: 'center', gap: spacing[6], borderRadius: 20, borderCurve: 'continuous' },
   heroCopy: { flex: 1 },
   heroMessage: { marginTop: spacing[2] },
   heroStatus: { marginTop: spacing[4] },

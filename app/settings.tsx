@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Switch, View } from 'react-native';
 
@@ -17,6 +18,7 @@ import {
 import { collegeApi } from '@/lib/api';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [college, setCollege] = useState('');
   const [programme, setProgramme] = useState('');
@@ -76,7 +78,7 @@ export default function SettingsScreen() {
   };
 
   return <Screen contentContainerStyle={styles.content}>
-    <AppHeader title="Settings" />
+    <AppHeader title="Settings" style={styles.header} />
 
     {loading ? <View style={styles.loading}><ActivityIndicator color={colors.brand.cobalt} /><AppText variant="bodySmall" color={colors.neutral.textSecondary}>Loading settings…</AppText></View> : null}
     {loadError ? <InlineBanner title="Couldn’t load settings" message={loadError} tone="danger" action={<Button label="Retry" variant="ghost" size="compact" fullWidth={false} onPress={load} />} style={styles.firstBlock} /> : null}
@@ -155,16 +157,27 @@ export default function SettingsScreen() {
       </Card>
 
       <Button label="Save settings" loading={saving} haptic="success" onPress={save} style={styles.save} />
+
+      <AppText variant="heading3" style={styles.sectionTitle}>Account</AppText>
+      <Card style={styles.card} padding={0}>
+        <Button
+          label="View full account profile"
+          variant="secondary"
+          onPress={() => router.push('/account' as never)}
+          leading={<Ionicons name="person-outline" size={18} color={colors.brand.cobalt} />}
+        />
+      </Card>
     </> : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing[9] },
+  content: { paddingTop: spacing[1], paddingBottom: spacing[9] },
+  header: { paddingTop: spacing[2], minHeight: 0 },
   loading: { minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
-  firstBlock: { marginTop: spacing[6] },
-  intro: { marginTop: spacing[5], flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
-  introIcon: { width: 48, height: 48, borderRadius: radius.card, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
+  firstBlock: { marginTop: spacing[4] },
+  intro: { marginTop: spacing[3], flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
+  introIcon: { width: 48, height: 48, borderRadius: radius.card, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral.surface },
   introCopy: { flex: 1 },
   introText: { marginTop: spacing[1] },
   feedback: { marginTop: spacing[4] },
@@ -172,7 +185,7 @@ const styles = StyleSheet.create({
   card: { padding: spacing[5] },
   fields: { gap: spacing[4] },
   settingHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  settingIcon: { width: 40, height: 40, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand.cobaltSoft },
+  settingIcon: { width: 40, height: 40, borderRadius: radius.control, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand.cobaltSoft },
   settingCopy: { flex: 1 },
   settingSub: { marginTop: spacing[1] },
   nestedField: { marginTop: spacing[5], marginLeft: 52 },
