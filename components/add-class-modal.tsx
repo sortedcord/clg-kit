@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import {
   AppText,
@@ -33,8 +33,6 @@ export function AddClassModal({ visible, onClose, onAdded, date, regular = false
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectId, setSubjectId] = useState<number | null>(null);
   const [lectureMinutes, setLectureMinutes] = useState(60);
-  const [recessEnabled, setRecessEnabled] = useState(true);
-  const [recess, setRecess] = useState('13:00–14:00');
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [room, setRoom] = useState('');
@@ -42,6 +40,9 @@ export function AddClassModal({ visible, onClose, onAdded, date, regular = false
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('All');
 
   useEffect(() => {
     if (!visible) return;
@@ -64,14 +65,48 @@ export function AddClassModal({ visible, onClose, onAdded, date, regular = false
         const lastEnd = [...ranges].sort((left, right) => left.end.localeCompare(right.end)).at(-1)?.end;
         const nextStart = recessIsEnabled ? skipRecess(lastEnd || '09:00', recessStart, recessEnd) : (lastEnd || '09:00');
         setLectureMinutes(minutes);
-        setRecessEnabled(recessIsEnabled);
-        setRecess(`${recessStart}–${recessEnd}`);
         setStartTime(nextStart);
         setEndTime(addMinutes(nextStart, minutes));
+        setIsPickerOpen(false);
+        setSearchQuery('');
+        setSelectedType('All');
       })
       .catch((loadError: Error) => setError(loadError.message))
       .finally(() => setLoading(false));
   }, [visible, date, regular]);
+
+  const currentSubject = subjects.find((s) => s.id === subjectId) ?? subjects[0] ?? null;
+
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    subjects.forEach((s) => {
+      if (s.classType && s.classType.trim()) types.add(s.classType.trim());
+    });
+    return Array.from(types);
+  }, [subjects]);
+
+  const filteredSubjects = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return subjects.filter((s) => {
+      const matchesQuery =
+        !query ||
+        s.name.toLowerCase().includes(query) ||
+        s.code.toLowerCase().includes(query) ||
+        (s.shortName && s.shortName.toLowerCase().includes(query));
+      const matchesType = selectedType === 'All' || s.classType === selectedType;
+      return matchesQuery && matchesType;
+    });
+  }, [subjects, searchQuery, selectedType]);
+
+  const selectSubject = (subj: Subject) => {
+    setSubjectId(subj.id);
+    if (!room || subjects.some((s) => s.defaultRoom === room)) {
+      setRoom(subj.defaultRoom ?? '');
+    }
+    setIsPickerOpen(false);
+    setSearchQuery('');
+    setError('');
+  };
 
   const updateStart = (value: string) => {
     setStartTime(value);
@@ -127,30 +162,177 @@ export function AddClassModal({ visible, onClose, onAdded, date, regular = false
 
     {!loading ? <>
       <AppText variant="label" color={colors.neutral.textSecondary} style={styles.sectionLabel}>Subject</AppText>
-      {subjects.length === 0 ? <InlineBanner title="No subjects available" message="Add a subject from onboarding or your subject list before scheduling a class." tone="warning" /> : <View style={styles.subjects}>
-        {subjects.map((subject) => {
-          const tone = subjectToneFor(subject.id, subject.color);
-          const selected = subject.id === subjectId;
-          return <Pressable
-            key={subject.id}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: selected }}
-            accessibilityLabel={`${subject.name}, ${subject.code}`}
-            onPress={() => { setSubjectId(subject.id); setRoom(subject.defaultRoom ?? ''); setError(''); }}
-            style={({ pressed }) => [styles.subject, selected && { backgroundColor: colors.subject[tone].surface, borderColor: colors.subject[tone].accent }, pressed && styles.pressed]}>
-            <SubjectBadge shortName={subjectShortName(subject)} tone={tone} size="small" />
-            <View style={styles.subjectCopy}>
-              <AppText variant="label" numberOfLines={1}>{subject.name}</AppText>
-              <AppText variant="caption" color={colors.neutral.textMuted}>{subject.code}</AppText>
+      {subjects.length === 0 ? (
+        <InlineBanner title="No subjects available" message="Add a subject from onboarding or your subject list before scheduling a class." tone="warning" />
+      ) : currentSubject ? (
+        <View style={styles.subjectSelectorWrap}>
+          {/* Selected Subject Card / Trigger */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Selected subject: ${currentSubject.name}, ${currentSubject.code}. Tap to change subject.`}
+            onPress={() => setIsPickerOpen((prev) => !prev)}
+            style={({ pressed }) => {
+              const tone = subjectToneFor(currentSubject.id, currentSubject.color);
+              const palette = colors.subject[tone];
+              return [
+                styles.selectedSubjectCard,
+                { backgroundColor: palette.surface, borderColor: palette.accent },
+                pressed && styles.pressed,
+              ];
+            }}>
+            <View style={styles.selectedSubjectInner}>
+              <SubjectBadge shortName={subjectShortName(currentSubject)} tone={subjectToneFor(currentSubject.id, currentSubject.color)} size="medium" />
+              <View style={styles.selectedSubjectCopy}>
+                <AppText variant="title" numberOfLines={1} style={{ color: colors.subject[subjectToneFor(currentSubject.id, currentSubject.color)].accent }}>
+                  {currentSubject.name}
+                </AppText>
+                <View style={styles.selectedSubjectMetaRow}>
+                  <AppText variant="caption" color={colors.neutral.textSecondary}>
+                    {currentSubject.code}
+                  </AppText>
+                  {currentSubject.classType ? (
+                    <>
+                      <AppText variant="caption" color={colors.neutral.textMuted}> · </AppText>
+                      <AppText variant="caption" color={colors.neutral.textSecondary}>
+                        {currentSubject.classType}
+                      </AppText>
+                    </>
+                  ) : null}
+                </View>
+              </View>
+              <View style={[styles.changeBadge, { backgroundColor: colors.subject[subjectToneFor(currentSubject.id, currentSubject.color)].accent }]}>
+                <AppText variant="caption" color={colors.neutral.surface} style={styles.changeBadgeText}>
+                  {isPickerOpen ? 'Done' : 'Change'}
+                </AppText>
+                <Ionicons
+                  name={isPickerOpen ? 'chevron-up' : 'chevron-down'}
+                  size={12}
+                  color={colors.neutral.surface}
+                />
+              </View>
             </View>
-            <View style={[styles.radio, selected && { borderColor: colors.subject[tone].accent }]}>{selected ? <View style={[styles.radioDot, { backgroundColor: colors.subject[tone].accent }]} /> : null}</View>
-          </Pressable>;
-        })}
-      </View>}
+          </Pressable>
+
+          {/* Expandable Subject Picker Drawer */}
+          {isPickerOpen ? (
+            <View style={styles.pickerDrawer}>
+              {subjects.length > 4 ? (
+                <View style={styles.searchWrap}>
+                  <Ionicons name="search" size={16} color={colors.neutral.textMuted} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder="Search courses by name or code..."
+                    placeholderTextColor={colors.neutral.textMuted}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+                  {searchQuery ? (
+                    <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                      <Ionicons name="close-circle" size={16} color={colors.neutral.textMuted} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {availableTypes.length > 1 ? (
+                <View style={styles.typeFilterRow}>
+                  {['All', ...availableTypes].map((type) => {
+                    const active = selectedType === type;
+                    return (
+                      <Pressable
+                        key={type}
+                        onPress={() => setSelectedType(type)}
+                        style={[styles.typeChip, active && styles.typeChipActive]}>
+                        <AppText
+                          variant="caption"
+                          color={active ? colors.neutral.surface : colors.neutral.textSecondary}
+                          style={styles.typeChipText}>
+                          {type}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              <ScrollView
+                style={styles.pickerScroll}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="handled">
+                {filteredSubjects.map((subj) => {
+                  const isSelected = subj.id === subjectId;
+                  const tone = subjectToneFor(subj.id, subj.color);
+                  const palette = colors.subject[tone];
+                  return (
+                    <Pressable
+                      key={subj.id}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected }}
+                      accessibilityLabel={`${subj.name}, ${subj.code}`}
+                      onPress={() => selectSubject(subj)}
+                      style={({ pressed }) => [
+                        styles.pickerRow,
+                        isSelected && { backgroundColor: palette.surface },
+                        pressed && styles.pressed,
+                      ]}>
+                      <SubjectBadge shortName={subjectShortName(subj)} tone={tone} size="small" />
+                      <View style={styles.pickerRowCopy}>
+                        <AppText variant="label" numberOfLines={1}>
+                          {subj.name}
+                        </AppText>
+                        <AppText variant="caption" color={colors.neutral.textMuted}>
+                          {subj.code}{subj.classType ? ` · ${subj.classType}` : ''}
+                        </AppText>
+                      </View>
+                      {isSelected ? (
+                        <Ionicons name="checkmark-circle" size={18} color={palette.accent} />
+                      ) : (
+                        <Ionicons name="chevron-forward" size={14} color={colors.neutral.textDisabled} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+                {filteredSubjects.length === 0 ? (
+                  <View style={styles.emptySearch}>
+                    <AppText variant="caption" color={colors.neutral.textMuted}>
+                      No courses found matching &ldquo;{searchQuery}&rdquo;
+                    </AppText>
+                  </View>
+                ) : null}
+              </ScrollView>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.timeHeading}>
         <AppText variant="label" color={colors.neutral.textSecondary}>Time</AppText>
-        <AppText variant="caption" color={colors.neutral.textMuted}>{lectureMinutes} min default · {recessEnabled ? `recess ${recess}` : 'recess off'}</AppText>
+        <View style={styles.durationPresets}>
+          {[45, 50, 60, 90, 120].map((mins) => {
+            const currentDur = timeToMinutes(endTime) - timeToMinutes(startTime);
+            const isMatch = currentDur === mins;
+            return (
+              <Pressable
+                key={mins}
+                onPress={() => {
+                  if (validTime(startTime)) {
+                    setEndTime(addMinutes(startTime, mins));
+                  }
+                }}
+                style={[styles.durationChip, isMatch && styles.durationChipActive]}>
+                <AppText
+                  variant="caption"
+                  color={isMatch ? colors.brand.cobalt : colors.neutral.textMuted}
+                  style={isMatch ? styles.durationChipTextActive : styles.durationChipText}>
+                  {mins}m
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
       <View style={styles.timeFields}>
         <FormField label="Starts" value={startTime} onChangeText={updateStart} placeholder="09:00" hint="HH:MM" containerStyle={styles.timeField} />
@@ -165,15 +347,135 @@ export function AddClassModal({ visible, onClose, onAdded, date, regular = false
 const styles = StyleSheet.create({
   feedback: { marginTop: spacing[4] },
   loading: { minHeight: 180, alignItems: 'center', justifyContent: 'center', gap: spacing[3] },
-  sectionLabel: { marginTop: spacing[6], marginBottom: spacing[3] },
-  subjects: { gap: spacing[2] },
-  subject: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[3], paddingVertical: spacing[2], borderRadius: radius.card, borderCurve: 'continuous', borderWidth: 1, borderColor: colors.neutral.border, backgroundColor: colors.neutral.surface },
+  sectionLabel: { marginTop: spacing[5], marginBottom: spacing[2] },
+  subjectSelectorWrap: { gap: spacing[2] },
+  selectedSubjectCard: {
+    borderRadius: radius.card,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+  },
+  selectedSubjectInner: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderRadius: radius.card,
+    borderCurve: 'continuous',
+    borderWidth: 1.5,
+  },
+  selectedSubjectCopy: { flex: 1 },
+  selectedSubjectMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  changeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderCurve: 'continuous',
+  },
+  changeBadgeText: { fontWeight: '700', fontSize: 11 },
+  pickerDrawer: {
+    backgroundColor: colors.neutral.surface,
+    borderRadius: radius.card,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.neutral.border,
+    padding: spacing[3],
+    gap: spacing[2],
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
+    backgroundColor: colors.neutral.surfaceSubtle,
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
+    paddingHorizontal: spacing[3],
+    gap: spacing[2],
+  },
+  searchIcon: { marginRight: 2 },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontFamily: 'Manrope_500Medium',
+    fontSize: 13,
+    color: colors.neutral.textPrimary,
+    paddingVertical: 0,
+  },
+  typeFilterRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    paddingVertical: 2,
+  },
+  typeChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    borderCurve: 'continuous',
+    backgroundColor: colors.neutral.surfaceSubtle,
+  },
+  typeChipActive: {
+    backgroundColor: colors.brand.cobalt,
+  },
+  typeChipText: {
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  pickerScroll: {
+    maxHeight: 180,
+  },
+  pickerRow: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.control,
+    borderCurve: 'continuous',
+    marginVertical: 1,
+  },
+  pickerRowCopy: { flex: 1 },
+  emptySearch: {
+    paddingVertical: spacing[5],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pressed: { opacity: 0.76 },
-  subjectCopy: { flex: 1 },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: colors.neutral.border, alignItems: 'center', justifyContent: 'center' },
-  radioDot: { width: 10, height: 10, borderRadius: 5 },
-  timeHeading: { marginTop: spacing[6], marginBottom: spacing[3], flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing[3] },
+  timeHeading: {
+    marginTop: spacing[5],
+    marginBottom: spacing[2],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  durationPresets: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1] + 2,
+  },
+  durationChip: {
+    paddingHorizontal: spacing[2] + 2,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    borderCurve: 'continuous',
+    backgroundColor: colors.neutral.surfaceSubtle,
+  },
+  durationChipActive: {
+    backgroundColor: colors.brand.cobaltSoft,
+  },
+  durationChipText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  durationChipTextActive: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   timeFields: { flexDirection: 'row', gap: spacing[3] },
   timeField: { flex: 1 },
-  roomField: { marginTop: spacing[5], marginBottom: spacing[2] },
+  roomField: { marginTop: spacing[4], marginBottom: spacing[2] },
 });
