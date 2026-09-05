@@ -257,7 +257,14 @@ export default function TodayScreen() {
           }}
         />
       ) : (
-        <WeekStrip days={visibleDays} selectedDateKey={selectedDateKey} todayDateKey={todayKey} onSelect={setActiveDate} style={styles.weekStrip} />
+        <WeekStrip
+          days={visibleDays}
+          selectedDateKey={selectedDateKey}
+          todayDateKey={todayKey}
+          onSelect={setActiveDate}
+          onSwipeWeek={(direction) => setActiveDate((current) => addDays(current, direction * 7))}
+          style={styles.weekStrip}
+        />
       )}
       <Pressable
         accessibilityRole="button"

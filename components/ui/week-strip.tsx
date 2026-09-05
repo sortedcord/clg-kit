@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useMemo } from 'react';
+import { PanResponder, Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppText } from './app-text';
 import { colors, radius, spacing } from './tokens';
 import { formatDayHeading, formatWeekdayShort } from '@/lib/date';
@@ -10,6 +11,7 @@ type Props = {
   selectedDateKey: string;
   onSelect: (date: Date) => void;
   todayDateKey?: string;
+  onSwipeWeek?: (direction: -1 | 1) => void;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 };
@@ -18,8 +20,17 @@ const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() 
 const markerColor = { none: 'transparent', success: colors.semantic.success.solid, warning: colors.semantic.warning.solid, danger: colors.semantic.danger.solid, neutral: colors.neutral.textMuted } as const;
 
 /** The shared selected-date control: coral selection, cobalt today signal, semantic status dot. */
-export function WeekStrip({ days, selectedDateKey, onSelect, todayDateKey, style, accessibilityLabel = 'Choose a day' }: Props) {
-  return <View accessibilityLabel={accessibilityLabel} style={[styles.strip, style]}>
+export function WeekStrip({ days, selectedDateKey, onSelect, todayDateKey, onSwipeWeek, style, accessibilityLabel = 'Choose a day' }: Props) {
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, gestureState) => Boolean(onSwipeWeek) && Math.abs(gestureState.dx) > 24 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.2,
+    onPanResponderRelease: (_, gestureState) => {
+      if (!onSwipeWeek || Math.abs(gestureState.dx) < 48 || Math.abs(gestureState.dx) <= Math.abs(gestureState.dy)) return;
+      if (Platform.OS !== 'web') void Haptics.selectionAsync();
+      onSwipeWeek(gestureState.dx < 0 ? 1 : -1);
+    },
+  }), [onSwipeWeek]);
+
+  return <View accessibilityLabel={accessibilityLabel} {...panResponder.panHandlers} style={[styles.strip, style]}>
     {days.map(({ date, disabled = false, marker = 'none' }) => {
       const key = dateKey(date);
       const selected = key === selectedDateKey;

@@ -100,7 +100,14 @@ export default function TimetableScreen() {
         <IconButton icon="chevron-forward" label="Next week" tone="ghost" onPress={() => moveWeek(1)} />
       </View>
     </View>
-    <WeekStrip days={weekDays} selectedDateKey={selectedDateKey} todayDateKey={todayKey} onSelect={setActiveDate} style={styles.weekStrip} />
+    <WeekStrip
+      days={weekDays}
+      selectedDateKey={selectedDateKey}
+      todayDateKey={todayKey}
+      onSelect={setActiveDate}
+      onSwipeWeek={(direction) => setActiveDate((current) => addDays(current, direction * 7))}
+      style={styles.weekStrip}
+    />
 
     <View style={styles.sectionHeader}>
       <View style={styles.sectionCopy}>
